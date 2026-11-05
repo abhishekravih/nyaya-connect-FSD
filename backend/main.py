@@ -2,7 +2,7 @@
 NyayaConnect Marketplace Backend Service & Integration Hub (FastAPI)
 Unified Backend integrating:
 - Person 2: Relational SQL Database, Lawyer Directory, Smart Milestones, and JWT Auth
-- Person 4: Vernacular Voice Pipeline and Composite Orchestrator
+- Person 4: Vernacular Voice Pipeline, Composite Orchestrator, and Health Diagnostics
 File: /backend/main.py
 """
 
@@ -18,7 +18,8 @@ if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
 
 import logging
-from fastapi import FastAPI
+import httpx
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -31,9 +32,9 @@ logger = logging.getLogger("nyayaconnect.backend")
 
 # Database setup (auto-creates tables on boot)
 try:
-    from database import engine, Base
+    from database import engine, Base, check_db_health
 except ImportError:
-    from backend.database import engine, Base
+    from backend.database import engine, Base, check_db_health
 
 import models
 Base.metadata.create_all(bind=engine)
@@ -49,7 +50,7 @@ app = FastAPI(
 )
 
 # -----------------------------------------------------------------------------
-# Standardized CORS Middleware Configuration
+# Standardized CORS Middleware Configuration (Explicit Origins)
 # -----------------------------------------------------------------------------
 DEFAULT_ORIGINS = [
     "http://localhost:3000",
@@ -59,7 +60,7 @@ DEFAULT_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "https://nyayaconnect.vercel.app",
-    "https://legal-advisor-fsd.vercel.app"
+    "https://nyaya-connect-fsd.vercel.app"
 ]
 env_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 allowed_origins = list(set(DEFAULT_ORIGINS + env_origins))
@@ -67,9 +68,8 @@ allowed_origins = list(set(DEFAULT_ORIGINS + env_origins))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition", "Content-Type"]
 )
@@ -96,17 +96,50 @@ app.include_router(orchestrator_router)
 # Health Check & Gateway Diagnostics
 # -----------------------------------------------------------------------------
 @app.get("/health", tags=["Health & Diagnostics"])
+@app.get("/health/live", tags=["Health & Diagnostics"])
 @app.get("/api/v1/health", tags=["Health & Diagnostics"])
-async def health_check():
+async def health_live():
+    """Liveness probe: verifies process is alive and responding."""
     return {
         "status": "healthy",
         "service": "NyayaConnect Marketplace Backend",
         "port": int(os.getenv("PORT", "8000")),
-        "database_connected": True,
-        "rag_upstream": os.getenv("RAG_SERVICE_URL", "http://rag_service:8001/api/v1"),
-        "vernacular_voice_bridge": "operational",
         "sdg_alignment": "SDG 16: Peace, Justice, and Strong Institutions"
     }
+
+@app.get("/health/ready", tags=["Health & Diagnostics"])
+async def health_ready():
+    """
+    Readiness probe: actually checks connectivity to SQL database and RAG microservice.
+    Returns HTTP 503 if any required dependency is unavailable.
+    """
+    db_ok, db_msg = check_db_health()
+
+    rag_ok = False
+    rag_url = os.getenv("RAG_SERVICE_URL", "http://rag_service:8001/api/v1")
+    rag_local = os.getenv("RAG_LOCAL_URL", "http://127.0.0.1:8001/api/v1")
+
+    for url in [rag_url.replace("/api/v1", "/health"), rag_local.replace("/api/v1", "/health"), "http://localhost:8001/health"]:
+        try:
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                res = await client.get(url)
+                if res.status_code == 200:
+                    rag_ok = True
+                    break
+        except Exception:
+            continue
+
+    all_ready = db_ok and rag_ok
+    status_code = status.HTTP_200_OK if all_ready else status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "ready": all_ready,
+            "database": {"status": "connected" if db_ok else "unreachable", "detail": db_msg},
+            "rag_service": {"status": "connected" if rag_ok else "unreachable", "target": rag_url}
+        }
+    )
 
 @app.get("/", tags=["Root"])
 def root_index():
@@ -125,10 +158,13 @@ def root_index():
             "lawyers_detail": "GET /api/v1/lawyers/{lawyer_id}",
             "lawyers_recommend": "POST /api/v1/lawyers/recommend",
             "bookings_create": "POST /api/v1/bookings",
+            "direct_booking": "POST /api/v1/lawyers/book",
+            "dashboard_bookings": "GET /api/v1/lawyers/bookings",
             "milestone_update": "PATCH /api/v1/bookings/{booking_id}/milestones/{stage_no}",
             "vernacular_voice_ask": "POST /api/v1/voice/ask",
             "unified_orchestration": "POST /api/v1/orchestrate/legal-assist",
-            "health": "GET /health"
+            "health_live": "GET /health/live",
+            "health_ready": "GET /health/ready"
         }
     }
 

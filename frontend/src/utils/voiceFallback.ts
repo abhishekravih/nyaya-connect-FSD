@@ -1,35 +1,72 @@
 /**
- * NyayaConnect Vernacular Voice Integration & Web Speech API Zero-Latency Fallback
+ * NyayaConnect Vernacular Voice Integration & Web Speech Utility
  * Person 4: Systems Integration & DevOps Lead
  * File: /frontend/src/utils/voiceFallback.ts
  *
- * Provides resilient, zero-latency in-browser vernacular voice transcription.
- * Designed to function smoothly on restricted college, hackathon, and mobile Wi-Fi networks
- * where external cloud STT APIs may experience timeouts or quota limits.
+ * NOTE ON BROWSER SPEECH RECOGNITION (MDN REFERENCE):
+ * The Web Speech API does NOT guarantee on-device or offline recognition.
+ * Most modern browsers (Chrome/Edge) stream audio to vendor cloud servers
+ * (e.g. Google/Microsoft speech servers) unless on-device language packs and
+ * experimental APIs (e.g. `processLocally`) are supported and installed.
+ * When on restricted networks (firewalls/proxies blocking speech servers),
+ * browser recognition may fail; users should use the direct text input fallback.
  */
 
 export interface SpeechRecognitionOptions {
   language: string; // e.g., 'kn-IN', 'hi-IN', 'ta-IN', 'te-IN', 'en-IN'
   onResult: (transcript: string, isFinal: boolean) => void;
   onError: (error: string) => void;
-  onStart?: () => void;
+  onStart?: (mode: 'on-device' | 'cloud-stream' | 'unknown') => void;
   onEnd?: () => void;
 }
 
 export interface VoiceRecordingSession {
   stop: () => void;
   abort: () => void;
+  mode: 'on-device' | 'cloud-stream' | 'unknown';
 }
 
-// Check if browser supports Web Speech API
-export function isWebSpeechSupported(): boolean {
-  if (typeof window === 'undefined') return false;
-  return 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+export interface BrowserSpeechCapability {
+  supported: boolean;
+  hasOnDeviceOption: boolean;
+  notes: string;
+}
+
+/**
+ * Checks browser speech recognition capabilities based on MDN standards.
+ */
+export function checkSpeechCapabilities(): BrowserSpeechCapability {
+  if (typeof window === 'undefined') {
+    return { supported: false, hasOnDeviceOption: false, notes: 'Non-browser SSR environment' };
+  }
+
+  const SpeechRecognition =
+    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    return {
+      supported: false,
+      hasOnDeviceOption: false,
+      notes: 'Web Speech API is not supported in this browser. Use Chrome, Edge, or direct text input.'
+    };
+  }
+
+  // Check for experimental processLocally property support
+  const instance = new SpeechRecognition();
+  const hasOnDeviceOption = 'processLocally' in instance;
+
+  return {
+    supported: true,
+    hasOnDeviceOption,
+    notes: hasOnDeviceOption
+      ? 'Browser supports on-device speech preference check.'
+      : 'Standard Web Speech active (may rely on browser cloud servers).'
+  };
 }
 
 /**
  * Initializes and starts the browser's native Web Speech Recognition engine.
- * Emits zero-latency live transcripts directly from client hardware.
+ * Sets realistic expectations regarding network and on-device requirements.
  */
 export function startVernacularSpeechRecognition(options: SpeechRecognitionOptions): VoiceRecordingSession | null {
   if (typeof window === 'undefined') return null;
@@ -38,7 +75,7 @@ export function startVernacularSpeechRecognition(options: SpeechRecognitionOptio
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
-    options.onError('Web Speech API is not supported in this browser. Please use Google Chrome or Edge.');
+    options.onError('Web Speech API is not supported in this browser. Please use Google Chrome/Edge or type your question below.');
     return null;
   }
 
@@ -49,8 +86,22 @@ export function startVernacularSpeechRecognition(options: SpeechRecognitionOptio
     recognition.lang = options.language || 'kn-IN';
     recognition.maxAlternatives = 1;
 
+    let recognizedMode: 'on-device' | 'cloud-stream' | 'unknown' = 'unknown';
+
+    // Attempt on-device preference if browser supports the draft specification
+    if ('processLocally' in recognition) {
+      try {
+        (recognition as any).processLocally = true;
+        recognizedMode = 'on-device';
+      } catch {
+        recognizedMode = 'cloud-stream';
+      }
+    } else {
+      recognizedMode = 'cloud-stream';
+    }
+
     recognition.onstart = () => {
-      if (options.onStart) options.onStart();
+      if (options.onStart) options.onStart(recognizedMode);
     };
 
     recognition.onresult = (event: any) => {
@@ -71,8 +122,13 @@ export function startVernacularSpeechRecognition(options: SpeechRecognitionOptio
     };
 
     recognition.onerror = (event: any) => {
-      console.warn('[NyayaConnect WebSpeech Error]:', event.error);
-      options.onError(event.error || 'Speech recognition encountered a network or permission error');
+      let message = event.error;
+      if (event.error === 'network') {
+        message = 'Speech recognition network error: Cloud speech server unreachable on this network. Please type your query below.';
+      } else if (event.error === 'not-allowed') {
+        message = 'Microphone permission denied. Please allow microphone access or type your query.';
+      }
+      options.onError(message);
     };
 
     recognition.onend = () => {
@@ -85,28 +141,27 @@ export function startVernacularSpeechRecognition(options: SpeechRecognitionOptio
       stop: () => {
         try {
           recognition.stop();
-        } catch (e) {
-          // ignore already stopped
+        } catch {
+          // ignore
         }
       },
       abort: () => {
         try {
           recognition.abort();
-        } catch (e) {
+        } catch {
           // ignore
         }
-      }
+      },
+      mode: recognizedMode
     };
   } catch (err: any) {
-    options.onError(err.message || 'Failed to start Web Speech Recognition');
+    options.onError(err.message || 'Failed to initialize speech recognition. Use text input.');
     return null;
   }
 }
 
 /**
- * Helper to record raw audio blob via MediaRecorder API concurrently,
- * so the backend voice bridge receives both the physical audio stream and
- * the local Web Speech fallback transcript.
+ * Captures raw audio blob from device microphone via MediaRecorder API.
  */
 export async function captureAudioBlob(
   onStop: (blob: Blob) => void
@@ -117,9 +172,13 @@ export async function captureAudioBlob(
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
-    });
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm')
+      ? 'audio/webm'
+      : 'audio/mp4';
+
+    const mediaRecorder = new MediaRecorder(stream, { mimeType });
     const chunks: Blob[] = [];
 
     mediaRecorder.ondataavailable = (e) => {
@@ -130,7 +189,6 @@ export async function captureAudioBlob(
 
     mediaRecorder.onstop = () => {
       const audioBlob = new Blob(chunks, { type: mediaRecorder.mimeType });
-      // Stop all tracks to release hardware microphone
       stream.getTracks().forEach((track) => track.stop());
       onStop(audioBlob);
     };
@@ -145,7 +203,7 @@ export async function captureAudioBlob(
       }
     };
   } catch (err) {
-    console.warn('Microphone access unavailable or denied:', err);
+    console.warn('Microphone access unavailable:', err);
     return null;
   }
 }

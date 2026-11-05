@@ -75,6 +75,17 @@ def get_db():
     finally:
         db.close()
 
+def check_db_health():
+    """
+    Truthful database health check executing SELECT 1.
+    """
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True, "database reachable"
+    except Exception as e:
+        return False, str(e)
+
 async def get_lawyers_by_category_db(category: str):
     """
     Integration helper for Person 4's composite orchestrator.

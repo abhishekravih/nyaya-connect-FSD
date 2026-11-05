@@ -1,0 +1,16 @@
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.git
+.gitignore
+.env*
+.pytest_cache
+*.log
+chroma_db/*.sqlite3
+chroma_db/*
+!chroma_db/.gitkeep
