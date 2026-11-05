@@ -1,0 +1,82 @@
+# =====================================================================
+# Root docker-compose.yml orchestrated by Person 4
+# Systems Integrator & DevOps Lead for Legal-advisor-FSD (NyayaConnect)
+# =====================================================================
+
+version: '3.9'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: nyayaconnect_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-nyayaconnect_secret_pass}
+      MYSQL_DATABASE: nyayaconnect
+    ports:
+      - "3306:3306"
+    volumes:
+      - "./backend/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rag_service:
+    build:
+      context: ./rag_service
+      dockerfile: Dockerfile
+    container_name: nyayaconnect_rag
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env.example
+    volumes:
+      - "./rag_service/chroma_db:/app/chroma_db"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nyayaconnect_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_started
+      rag_service:
+        condition: service_started
+    env_file:
+      - .env.example
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_PASSWORD=${DB_PASSWORD:-nyayaconnect_secret_pass}
+      - RAG_SERVICE_URL=http://rag_service:8001/api/v1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nyayaconnect_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+      - NEXT_PUBLIC_USE_MOCKS=false
