@@ -38,6 +38,7 @@ venv.bak/
 !.env.local.example
 
 # Database & Vector DB
+*.db
 *.sqlite
 *.sqlite3
 *.db

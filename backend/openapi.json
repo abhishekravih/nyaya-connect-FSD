@@ -1,0 +1,1728 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NyayaConnect Marketplace API & Integration Hub",
+    "description": "Unified API Gateway connecting Person 1 (Next.js), Person 2 (FastAPI Marketplace & DB), Person 3 (RAG AI), and Person 4 (DevOps & Voice)",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register User",
+        "description": "Registers a new user supporting both 'CLIENT' and 'LAWYER' roles.\nBcrypt hashes the password and ensures email uniqueness.",
+        "operationId": "register_user_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Login User",
+        "description": "Authenticates user and returns JWT bearer token.\nSupports both JSON payloads ({\"email\": \"...\", \"password\": \"...\"})\nand OAuth2 form data (username=...&password=...) for Swagger UI /docs.\nSupports both 'CLIENT' and 'LAWYER' roles.",
+        "operationId": "login_user_api_v1_auth_login_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get Current User Profile",
+        "description": "Returns profile of currently authenticated user using JWT bearer token.\nRejects unauthenticated requests with HTTP 401.",
+        "operationId": "get_current_user_profile_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lawyers": {
+      "get": {
+        "tags": [
+          "Lawyer Directory"
+        ],
+        "summary": "List Lawyers",
+        "description": "Search and filter verified lawyers across Civil, Consumer, and Criminal categories.\nSupports multi-criteria filtering by category, max_budget, language, city, and sorting.",
+        "operationId": "list_lawyers_api_v1_lawyers_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CaseCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "max_budget",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Budget"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "City"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(fee_asc|fee_desc|experience_desc|rating_desc)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort By"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LawyerResponse"
+                  },
+                  "title": "Response List Lawyers Api V1 Lawyers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lawyers/{lawyer_id}": {
+      "get": {
+        "tags": [
+          "Lawyer Directory"
+        ],
+        "summary": "Get Lawyer Profile",
+        "description": "Returns full lawyer profile with category benchmark fee comparison.\nCalculates dynamic average full_case_estimate for the lawyer's category\nand generates an automated comparison badge.",
+        "operationId": "get_lawyer_profile_api_v1_lawyers__lawyer_id__get",
+        "parameters": [
+          {
+            "name": "lawyer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lawyer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LawyerDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lawyers/recommend": {
+      "post": {
+        "tags": [
+          "Lawyer Directory"
+        ],
+        "summary": "Recommend Lawyers",
+        "description": "Integration endpoint for Person 3's RAG service.\nAccepts detected legal category and urgency/budget parameters, returning the top 3\nmatching verified lawyers sorted by rating and fee affordability.",
+        "operationId": "recommend_lawyers_api_v1_lawyers_recommend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LawyerRecommendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LawyerResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Recommend Lawyers Api V1 Lawyers Recommend Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings": {
+      "post": {
+        "tags": [
+          "Smart Milestone Bookings"
+        ],
+        "summary": "Create Booking",
+        "description": "Creates an atomic, race-condition-free case booking and automatically generates\n4 linked milestone rows with exact DECIMAL(10,2) fee splits (15%, 25%, 30%, 30%).\nProtected route: requires valid JWT bearer token (HTTP 401 if unauthenticated).",
+        "operationId": "create_booking_api_v1_bookings_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Smart Milestone Bookings"
+        ],
+        "summary": "List Bookings",
+        "description": "List bookings with associated 4-stage milestones.\nProtected route: requires valid JWT bearer token.",
+        "operationId": "list_bookings_api_v1_bookings_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  },
+                  "title": "Response List Bookings Api V1 Bookings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/user/{user_id}": {
+      "get": {
+        "tags": [
+          "Smart Milestone Bookings"
+        ],
+        "summary": "Get User Bookings",
+        "description": "Returns all bookings placed by a specific user with ordered 4-stage milestones\nfor Person 1's /dashboard client UI.\nProtected route: requires valid JWT bearer token.",
+        "operationId": "get_user_bookings_api_v1_bookings_user__user_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  },
+                  "title": "Response Get User Bookings Api V1 Bookings User  User Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{booking_id}": {
+      "get": {
+        "tags": [
+          "Smart Milestone Bookings"
+        ],
+        "summary": "Get Booking",
+        "description": "Fetch a single booking with its 4-stage milestones.\nProtected route: requires valid JWT bearer token.",
+        "operationId": "get_booking_api_v1_bookings__booking_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{booking_id}/milestones/{stage_no}": {
+      "patch": {
+        "tags": [
+          "Smart Milestone Bookings"
+        ],
+        "summary": "Update Milestone Stage",
+        "description": "Updates milestone status ('PENDING' -> 'IN_PROGRESS' -> 'COMPLETED').\nEnforces sequential stage progression: later stages cannot be marked\n'IN_PROGRESS' or 'COMPLETED' while an earlier stage is still pending.\nAudits updated_at and completed_at timestamps.\nProtected route: requires valid JWT bearer token.",
+        "operationId": "update_milestone_stage_api_v1_bookings__booking_id__milestones__stage_no__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "stage_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Stage No"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MilestoneStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MilestoneResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/voice/ask": {
+      "post": {
+        "tags": [
+          "Vernacular Voice Pipeline"
+        ],
+        "summary": "Vernacular Voice-to-RAG 4-Stage Bridge",
+        "description": "Exposes POST /api/v1/voice/ask handling multipart/form-data.\nExecutes the 4-stage pipeline connecting citizen voice input to Constitutional RAG.",
+        "operationId": "voice_ask_endpoint_api_v1_voice_ask_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_voice_ask_endpoint_api_v1_voice_ask_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/voice/ask-json": {
+      "post": {
+        "tags": [
+          "Vernacular Voice Pipeline"
+        ],
+        "summary": "Vernacular Voice Pipeline JSON Alternative",
+        "description": "Alternative endpoint accepting JSON payloads with base64 audio or Web Speech API transcript.",
+        "operationId": "voice_ask_json_endpoint_api_v1_voice_ask_json_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceAskJSONRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceAskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/orchestrate/legal-assist": {
+      "post": {
+        "tags": [
+          "Unified Orchestrator"
+        ],
+        "summary": "Composite Ask -> Classify -> Recommend Flow",
+        "description": "Unified composite endpoint called by frontend.\nReturns Constitutional advice from RAG and top 3 affordable verified lawyers in <3s.",
+        "operationId": "orchestrate_legal_assist_api_v1_orchestrate_legal_assist_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalAssistRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalAssistResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "Health & Diagnostics"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health & Diagnostics"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "Root"
+        ],
+        "summary": "Root Index",
+        "operationId": "root_index__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArticleCitation": {
+        "properties": {
+          "article_number": {
+            "type": "string",
+            "title": "Article Number"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "relevance_summary": {
+            "type": "string",
+            "title": "Relevance Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "article_number",
+          "title",
+          "relevance_summary"
+        ],
+        "title": "ArticleCitation"
+      },
+      "Body_voice_ask_endpoint_api_v1_voice_ask_post": {
+        "properties": {
+          "audio_file": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/octet-stream"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio File",
+            "description": "Audio blob recorded in browser"
+          },
+          "source_language": {
+            "type": "string",
+            "title": "Source Language",
+            "description": "Language code: kn-IN, hi-IN, ta-IN, etc.",
+            "default": "kn-IN"
+          },
+          "browser_transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browser Transcript",
+            "description": "Web Speech API zero-latency fallback text"
+          }
+        },
+        "type": "object",
+        "title": "Body_voice_ask_endpoint_api_v1_voice_ask_post"
+      },
+      "BookingCreate": {
+        "properties": {
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "lawyer_id": {
+            "type": "integer",
+            "title": "Lawyer Id"
+          },
+          "case_category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "case_summary": {
+            "type": "string",
+            "minLength": 10,
+            "title": "Case Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "lawyer_id",
+          "case_category",
+          "case_summary"
+        ],
+        "title": "BookingCreate"
+      },
+      "BookingResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "integer",
+            "title": "Booking Id"
+          },
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "lawyer_id": {
+            "type": "integer",
+            "title": "Lawyer Id"
+          },
+          "case_category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "case_summary": {
+            "type": "string",
+            "title": "Case Summary"
+          },
+          "total_agreed_fee": {
+            "type": "string",
+            "title": "Total Agreed Fee"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/MilestoneResponse"
+            },
+            "type": "array",
+            "title": "Milestones",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "user_id",
+          "lawyer_id",
+          "case_category",
+          "case_summary",
+          "total_agreed_fee"
+        ],
+        "title": "BookingResponse"
+      },
+      "CaseCategory": {
+        "type": "string",
+        "enum": [
+          "Civil",
+          "Consumer",
+          "Criminal"
+        ],
+        "title": "CaseCategory"
+      },
+      "ConstitutionalArticle": {
+        "properties": {
+          "article_number": {
+            "type": "string",
+            "title": "Article Number"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "relevance_summary": {
+            "type": "string",
+            "title": "Relevance Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "article_number",
+          "title",
+          "relevance_summary"
+        ],
+        "title": "ConstitutionalArticle"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LawyerDetailResponse": {
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "bar_council_id": {
+            "type": "string",
+            "title": "Bar Council Id"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "experience_years": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Experience Years"
+          },
+          "languages": {
+            "type": "string",
+            "title": "Languages"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "consultation_fee": {
+            "type": "string",
+            "title": "Consultation Fee"
+          },
+          "drafting_fee": {
+            "type": "string",
+            "title": "Drafting Fee"
+          },
+          "hearing_fee": {
+            "type": "string",
+            "title": "Hearing Fee"
+          },
+          "full_case_estimate": {
+            "type": "string",
+            "title": "Full Case Estimate"
+          },
+          "rating": {
+            "type": "string",
+            "title": "Rating",
+            "default": "4.50"
+          },
+          "lawyer_id": {
+            "type": "integer",
+            "title": "Lawyer Id"
+          },
+          "category_average_fee": {
+            "type": "string",
+            "title": "Category Average Fee"
+          },
+          "fee_comparison_badge": {
+            "type": "string",
+            "title": "Fee Comparison Badge"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name",
+          "bar_council_id",
+          "category",
+          "experience_years",
+          "languages",
+          "city",
+          "phone",
+          "email",
+          "consultation_fee",
+          "drafting_fee",
+          "hearing_fee",
+          "full_case_estimate",
+          "lawyer_id",
+          "category_average_fee",
+          "fee_comparison_badge"
+        ],
+        "title": "LawyerDetailResponse"
+      },
+      "LawyerRecommendRequest": {
+        "properties": {
+          "recommended_case_category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "urgency_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(Low|Medium|High)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency Level",
+            "default": "Medium"
+          },
+          "max_budget": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Budget"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recommended_case_category"
+        ],
+        "title": "LawyerRecommendRequest"
+      },
+      "LawyerRecommendation": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "specialization": {
+            "type": "string",
+            "title": "Specialization"
+          },
+          "bar_council_id": {
+            "type": "string",
+            "title": "Bar Council Id"
+          },
+          "experience_years": {
+            "type": "integer",
+            "title": "Experience Years"
+          },
+          "consultation_fee": {
+            "type": "number",
+            "title": "Consultation Fee"
+          },
+          "rating": {
+            "type": "number",
+            "title": "Rating"
+          },
+          "reviews_count": {
+            "type": "integer",
+            "title": "Reviews Count"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified"
+          },
+          "languages_spoken": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages Spoken"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "milestones": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Milestones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "specialization",
+          "bar_council_id",
+          "experience_years",
+          "consultation_fee",
+          "rating",
+          "reviews_count",
+          "verified",
+          "languages_spoken",
+          "location",
+          "milestones"
+        ],
+        "title": "LawyerRecommendation"
+      },
+      "LawyerResponse": {
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "bar_council_id": {
+            "type": "string",
+            "title": "Bar Council Id"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CaseCategory"
+          },
+          "experience_years": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Experience Years"
+          },
+          "languages": {
+            "type": "string",
+            "title": "Languages"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "consultation_fee": {
+            "type": "string",
+            "title": "Consultation Fee"
+          },
+          "drafting_fee": {
+            "type": "string",
+            "title": "Drafting Fee"
+          },
+          "hearing_fee": {
+            "type": "string",
+            "title": "Hearing Fee"
+          },
+          "full_case_estimate": {
+            "type": "string",
+            "title": "Full Case Estimate"
+          },
+          "rating": {
+            "type": "string",
+            "title": "Rating",
+            "default": "4.50"
+          },
+          "lawyer_id": {
+            "type": "integer",
+            "title": "Lawyer Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name",
+          "bar_council_id",
+          "category",
+          "experience_years",
+          "languages",
+          "city",
+          "phone",
+          "email",
+          "consultation_fee",
+          "drafting_fee",
+          "hearing_fee",
+          "full_case_estimate",
+          "lawyer_id"
+        ],
+        "title": "LawyerResponse"
+      },
+      "LegalAssistRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query",
+            "description": "Legal question submitted by user"
+          },
+          "source_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Language",
+            "description": "Language of inquiry",
+            "default": "en-IN"
+          },
+          "user_location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Location",
+            "description": "User city/state",
+            "default": "Bengaluru, Karnataka"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "LegalAssistRequest"
+      },
+      "LegalAssistResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "constitutional_articles": {
+            "items": {
+              "$ref": "#/components/schemas/ConstitutionalArticle"
+            },
+            "type": "array",
+            "title": "Constitutional Articles"
+          },
+          "recommended_lawyers": {
+            "items": {
+              "$ref": "#/components/schemas/LawyerRecommendation"
+            },
+            "type": "array",
+            "title": "Recommended Lawyers"
+          },
+          "response_time_ms": {
+            "type": "number",
+            "title": "Response Time Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "query",
+          "category",
+          "explanation",
+          "constitutional_articles",
+          "recommended_lawyers",
+          "response_time_ms"
+        ],
+        "title": "LegalAssistResponse"
+      },
+      "MilestoneResponse": {
+        "properties": {
+          "milestone_id": {
+            "type": "integer",
+            "title": "Milestone Id"
+          },
+          "booking_id": {
+            "type": "integer",
+            "title": "Booking Id"
+          },
+          "stage_no": {
+            "type": "integer",
+            "title": "Stage No"
+          },
+          "stage_name": {
+            "type": "string",
+            "title": "Stage Name"
+          },
+          "percentage": {
+            "type": "string",
+            "title": "Percentage"
+          },
+          "amount": {
+            "type": "string",
+            "title": "Amount"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MilestoneStatus"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "milestone_id",
+          "booking_id",
+          "stage_no",
+          "stage_name",
+          "percentage",
+          "amount",
+          "status"
+        ],
+        "title": "MilestoneResponse"
+      },
+      "MilestoneStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "IN_PROGRESS",
+          "COMPLETED"
+        ],
+        "title": "MilestoneStatus"
+      },
+      "MilestoneStatusUpdate": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/MilestoneStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "MilestoneStatusUpdate"
+      },
+      "Token": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "role",
+          "user_id",
+          "email"
+        ],
+        "title": "Token"
+      },
+      "UserOut": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Full Name"
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole",
+            "default": "CLIENT"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "full_name",
+          "user_id"
+        ],
+        "title": "UserOut"
+      },
+      "UserRegister": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Full Name"
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole",
+            "default": "CLIENT"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 6,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "full_name",
+          "password"
+        ],
+        "title": "UserRegister"
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "CLIENT",
+          "LAWYER"
+        ],
+        "title": "UserRole"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VoiceAskJSONRequest": {
+        "properties": {
+          "audio_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Base64",
+            "description": "Base64-encoded audio blob"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript",
+            "description": "Web Speech API fallback transcript"
+          },
+          "source_language": {
+            "type": "string",
+            "title": "Source Language",
+            "description": "BCP-47 language code (e.g. kn-IN, hi-IN)",
+            "default": "kn-IN"
+          }
+        },
+        "type": "object",
+        "title": "VoiceAskJSONRequest"
+      },
+      "VoiceAskResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "source_language": {
+            "type": "string",
+            "title": "Source Language"
+          },
+          "transcribed_vernacular_text": {
+            "type": "string",
+            "title": "Transcribed Vernacular Text"
+          },
+          "translated_english_query": {
+            "type": "string",
+            "title": "Translated English Query"
+          },
+          "constitutional_articles": {
+            "items": {
+              "$ref": "#/components/schemas/ArticleCitation"
+            },
+            "type": "array",
+            "title": "Constitutional Articles"
+          },
+          "recommended_case_category": {
+            "type": "string",
+            "title": "Recommended Case Category"
+          },
+          "translated_explanation": {
+            "type": "string",
+            "title": "Translated Explanation"
+          },
+          "original_english_explanation": {
+            "type": "string",
+            "title": "Original English Explanation"
+          },
+          "pipeline_latency_ms": {
+            "type": "number",
+            "title": "Pipeline Latency Ms"
+          },
+          "speech_fallback_used": {
+            "type": "boolean",
+            "title": "Speech Fallback Used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "source_language",
+          "transcribed_vernacular_text",
+          "translated_english_query",
+          "constitutional_articles",
+          "recommended_case_category",
+          "translated_explanation",
+          "original_english_explanation",
+          "pipeline_latency_ms",
+          "speech_fallback_used"
+        ],
+        "title": "VoiceAskResponse"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/v1/auth/login"
+          }
+        }
+      }
+    }
+  }
+}

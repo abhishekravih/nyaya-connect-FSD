@@ -1,92 +1,67 @@
--- NyayaConnect MySQL 8.0 Initial Database Schema & Seed Data
--- Person 4: System Integration & DevOps Lead
--- Mapped to: /docker-entrypoint-initdb.d/1_schema.sql
+-- ============================================================
+-- NyayaConnect Relational Database Schema
+-- Person 2: Backend Architect & Database Engineer
+-- Target: MySQL Workbench 8.0+ / PostgreSQL / Cloud DB
+-- ============================================================
 
-CREATE DATABASE IF NOT EXISTS nyayaconnect;
-USE nyayaconnect;
-
--- Lawyers Directory Table
-CREATE TABLE IF NOT EXISTS lawyers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(150) NOT NULL,
-    category ENUM('Consumer', 'Civil', 'Criminal') NOT NULL,
-    bar_council_id VARCHAR(50) UNIQUE NOT NULL,
-    experience_years INT NOT NULL DEFAULT 1,
-    consultation_fee DECIMAL(10, 2) NOT NULL,
-    rating DECIMAL(3, 2) DEFAULT 5.0,
-    reviews_count INT DEFAULT 0,
-    verified BOOLEAN DEFAULT TRUE,
-    languages VARCHAR(255) DEFAULT 'English, Hindi',
-    location VARCHAR(150) NOT NULL,
-    milestones JSON,
+-- 1. Users Table (Clients & Lawyers)
+CREATE TABLE IF NOT EXISTS users (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(120) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(120) NOT NULL,
+    role ENUM('CLIENT', 'LAWYER') NOT NULL DEFAULT 'CLIENT',
+    phone VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Client Bookings with 4 Smart Milestones
-CREATE TABLE IF NOT EXISTS bookings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    lawyer_id INT NOT NULL,
-    client_name VARCHAR(150) NOT NULL,
-    client_phone VARCHAR(20) NOT NULL,
-    case_category VARCHAR(50) NOT NULL,
-    current_milestone INT DEFAULT 1,
-    total_fee DECIMAL(10, 2) NOT NULL,
-    payment_status ENUM('Pending', 'In_Escrow', 'Released') DEFAULT 'Pending',
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (lawyer_id) REFERENCES lawyers(id) ON DELETE CASCADE
+-- 2. Lawyers Table
+CREATE TABLE IF NOT EXISTS lawyers (
+    lawyer_id INT PRIMARY KEY AUTO_INCREMENT,
+    full_name VARCHAR(120) NOT NULL,
+    bar_council_id VARCHAR(50) UNIQUE NOT NULL,
+    category ENUM('Civil', 'Consumer', 'Criminal') NOT NULL,
+    experience_years INT NOT NULL,
+    languages VARCHAR(150) NOT NULL,
+    city VARCHAR(80) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    email VARCHAR(120) NOT NULL,
+    consultation_fee DECIMAL(10, 2) NOT NULL,
+    drafting_fee DECIMAL(10, 2) NOT NULL,
+    hearing_fee DECIMAL(10, 2) NOT NULL,
+    full_case_estimate DECIMAL(10, 2) NOT NULL,
+    rating DECIMAL(3, 2) DEFAULT 4.50,
+    INDEX idx_category (category),
+    INDEX idx_city (city),
+    INDEX idx_full_case_estimate (full_case_estimate)
 );
 
--- Seed Data: Verified Affordable Lawyers across Consumer, Civil, and Criminal Domains
-INSERT INTO lawyers (id, name, category, bar_council_id, experience_years, consultation_fee, rating, reviews_count, verified, languages, location, milestones)
-VALUES
-(1, 'Adv. Rajeshwari Hegde', 'Consumer', 'KAR/2014/4891', 9, 799.00, 4.9, 142, TRUE, 'Kannada, English, Hindi', 'Bengaluru, Karnataka', 
- JSON_ARRAY(
-   '1. Notice Drafting & Statutory Demand',
-   '2. District Consumer Commission Filing',
-   '3. Evidence & Rejoinder Submission',
-   '4. Final Arguments & Compensation Award'
- )),
-(2, 'Adv. Karthik Sundaram', 'Consumer', 'KAR/2017/2301', 6, 950.00, 4.8, 98, TRUE, 'Kannada, Tamil, English', 'Bengaluru, Karnataka',
- JSON_ARRAY(
-   '1. Case Evaluation & Evidence Review',
-   '2. Legal Notice Issue',
-   '3. Consumer Forum Filing',
-   '4. Settlement / Order Enforcement'
- )),
-(3, 'Adv. Priya Sharma', 'Consumer', 'DEL/2015/8812', 8, 1200.00, 4.7, 87, TRUE, 'Hindi, English', 'Delhi NCR / Virtual',
- JSON_ARRAY(
-   '1. Consultation & Document Audit',
-   '2. Legal Demand Formulation',
-   '3. State Commission Briefing',
-   '4. Decree Execution'
- )),
-(4, 'Adv. Ramesh Babu', 'Civil', 'KAR/2009/1192', 14, 999.00, 4.9, 215, TRUE, 'Kannada, Telugu, English', 'Bengaluru, Karnataka',
- JSON_ARRAY(
-   '1. Title Deed & Encumbrance Verification',
-   '2. Injunction Application Drafting',
-   '3. Trial Court Submissions',
-   '4. Final Decree & Partition Enforcement'
- )),
-(5, 'Adv. Meenakshi Venkat', 'Civil', 'TN/2012/6541', 11, 1100.00, 4.8, 134, TRUE, 'Tamil, English, Kannada', 'Chennai / Bengaluru',
- JSON_ARRAY(
-   '1. Mediation & Negotiation Session',
-   '2. Settlement Deed Drafting',
-   '3. Civil Suit Registration',
-   '4. Court Ratification'
- )),
-(6, 'Adv. Farooq Ahmed', 'Criminal', 'KAR/2011/3342', 12, 1200.00, 4.9, 189, TRUE, 'Kannada, Urdu, Hindi, English', 'Bengaluru, Karnataka',
- JSON_ARRAY(
-   '1. FIR Copy Analysis & Legal Strategy',
-   '2. Bail / Anticipatory Bail Filing',
-   '3. Sessions Court Hearing',
-   '4. Trial Preparation & Quashing Petition'
- )),
-(7, 'Adv. Deepa Narayan', 'Criminal', 'KAR/2018/1423', 6, 1350.00, 4.8, 91, TRUE, 'Kannada, English, Hindi', 'Bengaluru, Karnataka',
- JSON_ARRAY(
-   '1. Cyber Cell Police Complaint',
-   '2. Bank Account Freeze Petition',
-   '3. Magistrate Hearing Representation',
-   '4. Recovery / Trial Advocacy'
- ))
-ON DUPLICATE KEY UPDATE name=VALUES(name);
+-- 3. Bookings Table
+CREATE TABLE IF NOT EXISTS bookings (
+    booking_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    lawyer_id INT NOT NULL,
+    case_category ENUM('Civil', 'Consumer', 'Criminal') NOT NULL,
+    case_summary TEXT NOT NULL,
+    total_agreed_fee DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (lawyer_id) REFERENCES lawyers(lawyer_id) ON DELETE RESTRICT,
+    INDEX idx_user_id (user_id),
+    INDEX idx_lawyer_id (lawyer_id)
+);
+
+-- 4. Case Milestones Table (4 Sequential Linked Stages)
+CREATE TABLE IF NOT EXISTS case_milestones (
+    milestone_id INT PRIMARY KEY AUTO_INCREMENT,
+    booking_id INT NOT NULL,
+    stage_number INT NOT NULL,
+    stage_name VARCHAR(100) NOT NULL,
+    percentage DECIMAL(5, 2) NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    status ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED') DEFAULT 'PENDING' NOT NULL,
+    completed_at TIMESTAMP NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+    INDEX idx_booking_milestone (booking_id, stage_number)
+);

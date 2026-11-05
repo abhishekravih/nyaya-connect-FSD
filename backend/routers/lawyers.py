@@ -1,83 +1,130 @@
-"""
-NyayaConnect Marketplace Backend Router (Person 2 & Person 4 Integration)
-File: /backend/routers/lawyers.py
-"""
-
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from decimal import Decimal
+from database import get_db
+import models
+import schemas
 
-router = APIRouter(prefix="/api/v1/lawyers", tags=["Lawyer Marketplace"])
+router = APIRouter(prefix="/api/v1/lawyers", tags=["Lawyer Directory"])
 
-class LawyerItem(BaseModel):
-    id: int
-    name: str
-    specialization: str
-    bar_council_id: str
-    experience_years: int
-    consultation_fee: float
-    rating: float
-    reviews_count: int
-    verified: bool
-    languages_spoken: List[str]
-    location: str
-    milestones: List[str]
+@router.get("", response_model=List[schemas.LawyerResponse])
+@router.get("/", response_model=List[schemas.LawyerResponse], include_in_schema=False)
+def list_lawyers(
+    category: Optional[models.CaseCategory] = None,
+    max_budget: Optional[Decimal] = None,
+    language: Optional[str] = None,
+    city: Optional[str] = None,
+    sort_by: Optional[str] = Query(None, pattern="^(fee_asc|fee_desc|experience_desc|rating_desc)$"),
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """
+    Search and filter verified lawyers across Civil, Consumer, and Criminal categories.
+    Supports multi-criteria filtering by category, max_budget, language, city, and sorting.
+    """
+    query = db.query(models.Lawyer)
 
-class BookingRequest(BaseModel):
-    lawyer_id: int
-    client_name: str
-    client_phone: str
-    case_category: str
-    notes: Optional[str] = None
-
-class BookingResponse(BaseModel):
-    booking_id: int
-    lawyer_id: int
-    status: str
-    message: str
-    milestone_schedule: List[str]
-
-# In-memory booking records for persistence verification
-ACTIVE_BOOKINGS = []
-
-@router.get("", response_model=List[LawyerItem])
-async def list_lawyers(category: Optional[str] = Query(None, description="Filter by Civil, Consumer, Criminal")):
-    from backend.routers.orchestrator import query_marketplace_lawyers, FALLBACK_LAWYERS_BY_CATEGORY
     if category:
-        lawyers = await query_marketplace_lawyers(category.capitalize())
+        query = query.filter(models.Lawyer.category == category)
+    if max_budget is not None:
+        query = query.filter(models.Lawyer.full_case_estimate <= max_budget)
+    if language:
+        query = query.filter(models.Lawyer.languages.ilike(f"%{language.strip()}%"))
+    if city:
+        query = query.filter(models.Lawyer.city.ilike(f"%{city.strip()}%"))
+
+    # Sorting
+    if sort_by == "fee_asc":
+        query = query.order_by(models.Lawyer.full_case_estimate.asc(), models.Lawyer.rating.desc())
+    elif sort_by == "fee_desc":
+        query = query.order_by(models.Lawyer.full_case_estimate.desc(), models.Lawyer.rating.desc())
+    elif sort_by == "experience_desc":
+        query = query.order_by(models.Lawyer.experience_years.desc(), models.Lawyer.rating.desc())
     else:
-        all_l = []
-        for cat_list in FALLBACK_LAWYERS_BY_CATEGORY.values():
-            all_l.extend(cat_list)
-        lawyers = all_l
-    return [LawyerItem(**l) for l in lawyers]
+        # Default sort: Highest rating first, then fee affordability
+        query = query.order_by(models.Lawyer.rating.desc(), models.Lawyer.full_case_estimate.asc())
 
-@router.post("/book", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
-async def book_lawyer(booking: BookingRequest):
-    """Books a verified lawyer with upfront fee cards & 4 smart milestones."""
-    booking_id = len(ACTIVE_BOOKINGS) + 1
-    record = {
-        "id": booking_id,
-        "lawyer_id": booking.lawyer_id,
-        "client_name": booking.client_name,
-        "client_phone": booking.client_phone,
-        "category": booking.case_category,
-        "status": "Confirmed_Escrow_Hold",
-        "current_milestone": 1
-    }
-    ACTIVE_BOOKINGS.append(record)
-    
-    milestones = [
-        "Milestone 1: Preliminary Case Review & Evidence Audit",
-        "Milestone 2: Statutory Legal Notice & Registry Service",
-        "Milestone 3: Tribunal / District Commission Filing",
-        "Milestone 4: Arguments, Settlement & Decree Recovery"
-    ]
+    return query.offset(skip).limit(limit).all()
 
-    return BookingResponse(
-        booking_id=booking_id,
-        lawyer_id=booking.lawyer_id,
-        status="Confirmed",
-        message="Consultation booked successfully with smart escrow milestones.",
-        milestone_schedule=milestones
+@router.get("/{lawyer_id}", response_model=schemas.LawyerDetailResponse)
+def get_lawyer_profile(lawyer_id: int, db: Session = Depends(get_db)):
+    """
+    Returns full lawyer profile with category benchmark fee comparison.
+    Calculates dynamic average full_case_estimate for the lawyer's category
+    and generates an automated comparison badge.
+    """
+    lawyer = db.query(models.Lawyer).filter(models.Lawyer.lawyer_id == lawyer_id).first()
+    if not lawyer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Lawyer with ID {lawyer_id} not found"
+        )
+
+    # Calculate average full_case_estimate for this lawyer's category
+    avg_fee = db.query(func.avg(models.Lawyer.full_case_estimate)).filter(
+        models.Lawyer.category == lawyer.category
+    ).scalar()
+
+    if avg_fee is not None:
+        category_avg = Decimal(str(round(avg_fee, 2)))
+    else:
+        category_avg = lawyer.full_case_estimate
+
+    # Compute difference percentage
+    if category_avg > 0:
+        diff_pct = ((lawyer.full_case_estimate - category_avg) / category_avg) * Decimal("100")
+        diff_val = round(abs(diff_pct), 1)
+
+        if diff_pct < Decimal("-0.5"):
+            # Normalize display (e.g. 12% or 12.5%)
+            display_pct = int(diff_val) if diff_val == int(diff_val) else diff_val
+            badge = f"{display_pct}% Below Category Average"
+        elif diff_pct > Decimal("0.5"):
+            display_pct = int(diff_val) if diff_val == int(diff_val) else diff_val
+            badge = f"{display_pct}% Above Category Average"
+        else:
+            badge = "At Category Average"
+    else:
+        badge = "At Category Average"
+
+    return schemas.LawyerDetailResponse(
+        lawyer_id=lawyer.lawyer_id,
+        full_name=lawyer.full_name,
+        bar_council_id=lawyer.bar_council_id,
+        category=lawyer.category,
+        experience_years=lawyer.experience_years,
+        languages=lawyer.languages,
+        city=lawyer.city,
+        phone=lawyer.phone,
+        email=lawyer.email,
+        consultation_fee=lawyer.consultation_fee,
+        drafting_fee=lawyer.drafting_fee,
+        hearing_fee=lawyer.hearing_fee,
+        full_case_estimate=lawyer.full_case_estimate,
+        rating=lawyer.rating,
+        category_average_fee=category_avg,
+        fee_comparison_badge=badge
     )
+
+@router.post("/recommend", response_model=List[schemas.LawyerResponse])
+def recommend_lawyers(payload: schemas.LawyerRecommendRequest, db: Session = Depends(get_db)):
+    """
+    Integration endpoint for Person 3's RAG service.
+    Accepts detected legal category and urgency/budget parameters, returning the top 3
+    matching verified lawyers sorted by rating and fee affordability.
+    """
+    query = db.query(models.Lawyer).filter(
+        models.Lawyer.category == payload.recommended_case_category
+    )
+
+    if payload.max_budget is not None:
+        query = query.filter(models.Lawyer.full_case_estimate <= payload.max_budget)
+
+    # Sort by highest rating first, then lowest full_case_estimate for affordability
+    return query.order_by(
+        models.Lawyer.rating.desc(),
+        models.Lawyer.full_case_estimate.asc()
+    ).limit(3).all()

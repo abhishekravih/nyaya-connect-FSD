@@ -292,7 +292,10 @@ async def query_marketplace_lawyers(category: str) -> List[Dict[str, Any]]:
     Queries Person 2's MySQL database for verified lawyers in category sorted by fee.
     Falls back cleanly to seed pool to ensure 100% test reliability.
     """
-    from backend.database import get_lawyers_by_category_db
+    try:
+        from backend.database import get_lawyers_by_category_db
+    except ImportError:
+        from database import get_lawyers_by_category_db
     try:
         db_lawyers = await get_lawyers_by_category_db(category)
         if db_lawyers and len(db_lawyers) > 0:
