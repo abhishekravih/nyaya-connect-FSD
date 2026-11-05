@@ -102,8 +102,19 @@ def run_evaluation():
                 c_art = getattr(c, "article", str(c))
                 c_quote = getattr(c, "exact_quote", "")
                 
-                # Check cited in retrieved
-                art_in_retrieved = any(doc_art.lower() in c_art.lower() or c_art.lower() in doc_art.lower() for doc_art in retrieved_art_nums)
+                # Check cited in retrieved (including multi-section chunks e.g. Section 37 & 58)
+                art_in_retrieved = False
+                c_art_lower = c_art.lower()
+                c_nums = set(re.findall(r"\d+[A-Z]?", c_art_lower))
+                for doc_art in retrieved_art_nums:
+                    d_lower = doc_art.lower()
+                    if d_lower in c_art_lower or c_art_lower in d_lower:
+                        art_in_retrieved = True
+                        break
+                    d_nums = set(re.findall(r"\d+[A-Z]?", d_lower))
+                    if c_nums and c_nums.issubset(d_nums):
+                        art_in_retrieved = True
+                        break
                 
                 # Check quote verbatim
                 quote_in_ctx = True
@@ -122,6 +133,7 @@ def run_evaluation():
 
         progress = f"[{i+1:02d}/{len(dataset)}]"
         print(f" {progress} Cat: {resp.recommended_case_category:<8} | Cites: {len(resp.cited_articles)} | {q[:55]}...")
+        time.sleep(1.2)
 
     elapsed = round(time.time() - start_time, 2)
 

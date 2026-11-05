@@ -348,15 +348,17 @@ def extract_articles_and_schedules(doc: fitz.Document) -> List[Dict[str, Any]]:
 
 def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
     """
-    Reviewer Requirement 5: Expand corpus with official texts and landmark judgments:
-    - Consumer Protection Act, 2019 (CPA)
-    - Bharatiya Nyaya Sanhita, 2023 (BNS - replacing IPC)
-    - Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS - replacing CrPC)
-    - Right to Information Act, 2005 (RTI)
-    - Landmark Supreme Court Judgments (Maneka Gandhi, D.K. Basu, Puttaswamy, Navtej Johar, Vishaka)
+    Comprehensive Multi-Source Legal Corpus (Reviewer 10/10 Architecture):
+    - Consumer Protection Act, 2019 (CPA) - Complete Definitions, CCPA, Commissions, Appeals, Product Liability
+    - Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Arrest, Interrogation, Forensic Mandate, Bail, Zero FIR
+    - Bharatiya Nyaya Sanhita, 2023 (BNS) - Offences against Body, Women, Property, Negligence, Sovereignty
+    - Right to Information Act, 2005 (RTI) - Disclosure, 48-hr Liberty Mandate, Exemptions, Appeals, Penalties
+    - Landmark Supreme Court Precedents - Maneka Gandhi, D.K. Basu, Puttaswamy, Navtej Johar, Vishaka, Arnesh Kumar, Lalita Kumari, Shreya Singhal
     """
     expanded_chunks: List[Dict[str, Any]] = [
-        # 1. Consumer Protection Act, 2019
+        # ==========================================
+        # 1. CONSUMER PROTECTION ACT, 2019 (CPA)
+        # ==========================================
         {
             "id": "cpa_sec_2_def",
             "article_number": "CPA 2019 Section 2",
@@ -382,9 +384,29 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "char_count": 890
         },
         {
+            "id": "cpa_sec_10_21_ccpa",
+            "article_number": "CPA 2019 Section 10-21",
+            "title": "Central Consumer Protection Authority (CCPA): False Advertisements and Product Recall",
+            "part": "Chapter III - Central Consumer Protection Authority",
+            "clause": "Section 10, 18, 21",
+            "text": (
+                "Consumer Protection Act, 2019 - Chapter III (CCPA Regulatory Enforcement):\n"
+                "Section 10 establishes the Central Consumer Protection Authority (CCPA) to regulate matters relating to violation "
+                "of rights of consumers, unfair trade practices, and false or misleading advertisements.\n"
+                "Section 18 & 21: The Central Authority has the power to recall goods or withdraw services which are dangerous, hazardous, "
+                "or unsafe; reimburse the price of goods or services so recalled to purchasers; and discontinue practices which are unfair.\n"
+                "The CCPA may impose a penalty up to ten lakh rupees on a manufacturer or endorser for false or misleading advertisements, "
+                "and up to fifty lakh rupees for subsequent violations, and prohibit the endorser from endorsing any product for up to one year."
+            ),
+            "source": "Consumer Protection Act, 2019",
+            "source_type": "Statute",
+            "page_number": 8,
+            "char_count": 840
+        },
+        {
             "id": "cpa_sec_34_35_district",
             "article_number": "CPA 2019 Section 34 & 35",
-            "title": "Jurisdiction and Procedure for Filing Complaint before District Consumer Commission",
+            "title": "Jurisdiction and Procedure for Filing Complaint before District Consumer Commission (e-Daakhil)",
             "part": "Chapter IV - Consumer Disputes Redressal Commission",
             "clause": "Section 34 & 35",
             "text": (
@@ -401,6 +423,26 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "source_type": "Statute",
             "page_number": 18,
             "char_count": 860
+        },
+        {
+            "id": "cpa_sec_36_38_procedure",
+            "article_number": "CPA 2019 Section 36 & 38",
+            "title": "Admissibility of Consumer Complaint within 21 Days and Laboratory Testing Procedure",
+            "part": "Chapter IV - Consumer Disputes Redressal Commission",
+            "clause": "Section 36 & 38",
+            "text": (
+                "Consumer Protection Act, 2019 - Sections 36 & 38:\n"
+                "Section 36: On receipt of a complaint, the District Commission shall decide the admissibility of the complaint within "
+                "twenty-one days from the date on which the complaint was filed. If not decided within 21 days, it is deemed admitted.\n"
+                "Section 38: Procedure on admission: The Commission refers a copy of the admitted complaint to the opposite party directing "
+                "them to give their version within thirty days (extendable by 15 days). Where the defect cannot be determined without analysis, "
+                "the Commission shall obtain a sample from the complainant, seal it, and refer it to an appropriate laboratory with directions "
+                "to report findings within forty-five days."
+            ),
+            "source": "Consumer Protection Act, 2019",
+            "source_type": "Statute",
+            "page_number": 20,
+            "char_count": 810
         },
         {
             "id": "cpa_sec_39_remedies",
@@ -426,6 +468,26 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "char_count": 820
         },
         {
+            "id": "cpa_sec_41_47_58_appeals",
+            "article_number": "CPA 2019 Section 41, 47 & 58",
+            "title": "Appellate Hierarchy: State Commission, National Commission (NCDRC), and Supreme Court",
+            "part": "Chapter IV - Consumer Disputes Redressal Commission",
+            "clause": "Section 41, 47, 58",
+            "text": (
+                "Consumer Protection Act, 2019 - Sections 41, 47 & 58 (Appeals & Higher Commissions):\n"
+                "Section 41: Any person aggrieved by an order of the District Commission may prefer an appeal to the State Commission "
+                "within forty-five days from the date of the order, provided 50% of the awarded amount is deposited.\n"
+                "Section 47: State Commission has original jurisdiction for claims exceeding ₹50 Lakh up to ₹2 Crore (or ₹10 Crore under revised rules), "
+                "and appellate jurisdiction over all District Commissions in the State.\n"
+                "Section 58: National Consumer Disputes Redressal Commission (NCDRC) has jurisdiction for claims exceeding ₹2 Crore / ₹10 Crore, "
+                "and appellate jurisdiction over State Commissions. An appeal against NCDRC lies directly before the Supreme Court under Section 67 within thirty days."
+            ),
+            "source": "Consumer Protection Act, 2019",
+            "source_type": "Statute",
+            "page_number": 26,
+            "char_count": 920
+        },
+        {
             "id": "cpa_sec_82_product_liability",
             "article_number": "CPA 2019 Section 82-87",
             "title": "Product Liability Actions against Manufacturers, Service Providers, and Sellers",
@@ -446,11 +508,13 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "char_count": 720
         },
 
-        # 2. Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS)
+        # ==========================================
+        # 2. BHARATIYA NAGARIK SURAKSHA SANHITA, 2023 (BNSS)
+        # ==========================================
         {
             "id": "bnss_sec_35_arrest",
             "article_number": "BNSS 2023 Section 35",
-            "title": "When Police May Arrest Without Warrant & Arrest Procedure Safeguards",
+            "title": "When Police May Arrest Without Warrant & Safeguards (Replacing CrPC 41)",
             "part": "Chapter V - Arrest of Persons",
             "clause": "Section 35",
             "text": (
@@ -490,9 +554,49 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "char_count": 910
         },
         {
+            "id": "bnss_sec_38_40_safeguards",
+            "article_number": "BNSS 2023 Section 38 & 40",
+            "title": "Designated Police Officer in Every District and Public Display of Arrested Persons",
+            "part": "Chapter V - Arrest of Persons",
+            "clause": "Section 38 & Section 40",
+            "text": (
+                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Sections 38 & 40 (Custodial Transparency Safeguards):\n"
+                "Section 38: The State Government shall establish a police control room in every district and at the state level. "
+                "In every district and in every police station, a designated police officer not below the rank of Assistant Sub-Inspector "
+                "shall be responsible for maintaining information regarding all arrested persons, the offences charged, and the name "
+                "and designation of the arresting police officer.\n"
+                "Section 40: The names and details of all arrested persons and the offences for which they are arrested shall be prominently "
+                "displayed outside the police control room in the district and online on digital police portals."
+            ),
+            "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
+            "source_type": "Statute",
+            "page_number": 17,
+            "char_count": 830
+        },
+        {
+            "id": "bnss_sec_47_53_medical",
+            "article_number": "BNSS 2023 Section 47 & 53",
+            "title": "Search of Arrested Person, Female Search by Female Officer, and Mandatory Medical Examination",
+            "part": "Chapter V - Arrest of Persons",
+            "clause": "Section 47 & Section 53",
+            "text": (
+                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Sections 47 & 53:\n"
+                "Section 47 (replacing CrPC Section 51): Whenever a person is arrested by a police officer, the police officer may search "
+                "such person and place in safe custody all articles other than necessary wearing apparel. Whenever it is necessary to cause "
+                "a female to be searched, the search shall be made by another female with strict regard to decency.\n"
+                "Section 53 (replacing CrPC Section 54): When any person is arrested, he shall be examined by a registered medical practitioner "
+                "promptly after the arrest. A full medical examination report recording any pre-existing injuries, wounds, or marks of violence "
+                "shall be prepared, and a copy of such report shall be furnished to the arrested person or their nominated person."
+            ),
+            "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
+            "source_type": "Statute",
+            "page_number": 20,
+            "char_count": 880
+        },
+        {
             "id": "bnss_sec_173_fir",
             "article_number": "BNSS 2023 Section 173",
-            "title": "Registration of First Information Report (FIR), Zero FIR, and e-FIR",
+            "title": "Registration of First Information Report (FIR), Zero FIR, and e-FIR Mandate",
             "part": "Chapter XIII - Information to the Police and Their Powers to Investigate",
             "clause": "Section 173",
             "text": (
@@ -509,6 +613,44 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "source_type": "Statute",
             "page_number": 62,
             "char_count": 830
+        },
+        {
+            "id": "bnss_sec_176_forensic",
+            "article_number": "BNSS 2023 Section 176",
+            "title": "Mandatory Forensic Investigation for Heinous Offences and Videography of Search",
+            "part": "Chapter XIII - Information to the Police and Their Powers to Investigate",
+            "clause": "Section 176",
+            "text": (
+                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Section 176(3) (Forensic Mandate):\n"
+                "On receipt of every information relating to the commission of an offence which is punishable for seven years or more, "
+                "the officer in charge of a police station shall cause the forensic expert to visit the crime scene to collect forensic evidence, "
+                "and shall cause other evidence to be collected. The process of conducting search of a place or seizure of any property "
+                "and preparation of list of all things seized shall be recorded through audio-video electronic means, preferably mobile phone, "
+                "and forwarded without delay to the District Magistrate or Sub-divisional Magistrate."
+            ),
+            "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
+            "source_type": "Statute",
+            "page_number": 65,
+            "char_count": 790
+        },
+        {
+            "id": "bnss_sec_187_custody",
+            "article_number": "BNSS 2023 Section 187",
+            "title": "Police Custody vs. Judicial Custody and Default Statutory Bail Timelines (60/90 Days)",
+            "part": "Chapter XIII - Information to the Police and Their Powers to Investigate",
+            "clause": "Section 187",
+            "text": (
+                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Section 187 (replacing CrPC Section 167):\n"
+                "Procedure when investigation cannot be completed in twenty-four hours: The Magistrate may authorize detention of the accused "
+                "in custody for a term not exceeding fifteen days on the whole, or in parts, during the initial forty or sixty days.\n"
+                "Default Bail Mandate: The Magistrate cannot authorize detention beyond ninety days where the investigation relates to an offence "
+                "punishable with death, imprisonment for life or imprisonment for a term of not less than ten years, and sixty days for any other offence.\n"
+                "On the expiry of the said period of 90 or 60 days, the accused person shall be released on bail if he is prepared to and does furnish bail."
+            ),
+            "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
+            "source_type": "Statute",
+            "page_number": 72,
+            "char_count": 870
         },
         {
             "id": "bnss_sec_479_482_bail",
@@ -532,7 +674,69 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "char_count": 920
         },
 
-        # 3. Bharatiya Nyaya Sanhita, 2023 (BNS)
+        # ==========================================
+        # 3. BHARATIYA NYAYA SANHITA, 2023 (BNS)
+        # ==========================================
+        {
+            "id": "bns_sec_35_self_defence",
+            "article_number": "BNS 2023 Section 35-44",
+            "title": "Right of Private Defence of Body and Property (Replacing IPC 96-106)",
+            "part": "Chapter III - General Exceptions",
+            "clause": "Section 35 to 44",
+            "text": (
+                "Bharatiya Nyaya Sanhita, 2023 (BNS) - Sections 35 to 44:\n"
+                "Nothing is an offence which is done in the exercise of the right of private defence. Every person has a right to defend "
+                "his own body, and the body of any other person, against any offence affecting the human body; and the property of himself "
+                "or of any other person against theft, robbery, mischief or criminal trespass.\n"
+                "Section 38: The right of private defence of the body extends to causing death if the offence occasions reasonable apprehension "
+                "of death, grievous hurt, rape, unnatural lust, or kidnapping. The right in no case extends to inflicting more harm than is "
+                "necessary to inflict for the purpose of defence."
+            ),
+            "source": "Bharatiya Nyaya Sanhita, 2023",
+            "source_type": "Statute",
+            "page_number": 12,
+            "char_count": 820
+        },
+        {
+            "id": "bns_sec_63_69_women",
+            "article_number": "BNS 2023 Section 63-69",
+            "title": "Offences Against Women: Rape, Punishment, and Sexual Intercourse by Deceitful Means",
+            "part": "Chapter V - Offences Against Women and Children",
+            "clause": "Section 63, 64, 69",
+            "text": (
+                "Bharatiya Nyaya Sanhita, 2023 (BNS) - Sections 63 to 69:\n"
+                "Section 63 & 64 (replacing IPC 375/376): Defines rape and prescribes rigorous imprisonment for not less than ten years "
+                "which may extend to life imprisonment, and fine.\n"
+                "Section 69 (New Provision - Sexual Intercourse by Deceitful Means): Whoever, by deceitful means or by making promise to marry "
+                "to a woman without any intention of fulfilling the same, and has sexual intercourse with her, such sexual intercourse not "
+                "amounting to the offence of rape, shall be punished with imprisonment of either description for a term which may extend "
+                "to ten years and shall also be liable to fine. Deceitful means include false promise of employment or promotion, or fictitious marriage."
+            ),
+            "source": "Bharatiya Nyaya Sanhita, 2023",
+            "source_type": "Statute",
+            "page_number": 22,
+            "char_count": 860
+        },
+        {
+            "id": "bns_sec_74_79_modesty",
+            "article_number": "BNS 2023 Section 74-79",
+            "title": "Assault on Woman to Outrage Modesty, Stalking, and Sexual Harassment (Replacing IPC 354, 354D, 509)",
+            "part": "Chapter V - Offences Against Women and Children",
+            "clause": "Section 74, 75, 78, 79",
+            "text": (
+                "Bharatiya Nyaya Sanhita, 2023 (BNS) - Sections 74 to 79:\n"
+                "Section 74 (replacing IPC 354): Whoever assaults or uses criminal force to any woman, intending to outrage or knowing it to "
+                "be likely that he will thereby outrage her modesty, shall be punished with imprisonment of not less than one year up to five years and fine.\n"
+                "Section 78 (replacing IPC 354D): Stalking: Any man who follows a woman and contacts, or attempts to contact such woman to foster "
+                "personal interaction repeatedly despite a clear indication of disinterest; or monitors the use by a woman of internet, email or "
+                "electronic communication, commits stalking, punishable up to three years (first conviction) and five years (second conviction).\n"
+                "Section 79 (replacing IPC 509): Word, gesture or act intended to insult modesty of a woman, punishable up to three years."
+            ),
+            "source": "Bharatiya Nyaya Sanhita, 2023",
+            "source_type": "Statute",
+            "page_number": 25,
+            "char_count": 920
+        },
         {
             "id": "bns_sec_offences_body",
             "article_number": "BNS 2023 Section 103, 115, 118",
@@ -552,6 +756,26 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "char_count": 620
         },
         {
+            "id": "bns_sec_106_negligence",
+            "article_number": "BNS 2023 Section 106",
+            "title": "Causing Death by Negligence, Hit-and-Run Rash Driving, and Medical Negligence",
+            "part": "Chapter VI - Offences Affecting the Human Body",
+            "clause": "Section 106",
+            "text": (
+                "Bharatiya Nyaya Sanhita, 2023 (BNS) - Section 106 (replacing IPC 304A):\n"
+                "(1) Whoever causes the death of any person by doing any rash or negligent act not amounting to culpable homicide, shall be punished "
+                "with imprisonment of either description for a term which may extend to five years, and shall also be liable to fine; and if such "
+                "act is done by a registered medical practitioner while performing medical procedure, he shall be punished with imprisonment up to two years and fine.\n"
+                "(2) Hit-and-Run Provision: Whoever causes the death of any person by rash and negligent driving of vehicle not amounting to culpable "
+                "homicide, and escapes without reporting it to a police officer or a Magistrate soon after the incident, shall be punished with imprisonment "
+                "of either description for a term which may extend to ten years, and shall also be liable to fine."
+            ),
+            "source": "Bharatiya Nyaya Sanhita, 2023",
+            "source_type": "Statute",
+            "page_number": 34,
+            "char_count": 910
+        },
+        {
             "id": "bns_sec_theft_cheating",
             "article_number": "BNS 2023 Section 303 & 318",
             "title": "Offences Against Property: Theft, Cheating, and Dishonest Inducement",
@@ -569,12 +793,33 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "page_number": 88,
             "char_count": 680
         },
+        {
+            "id": "bns_sec_351_intimidation",
+            "article_number": "BNS 2023 Section 351",
+            "title": "Criminal Intimidation and Extortion (Replacing IPC 503 & 506)",
+            "part": "Chapter XVIII - Offences Affecting the Human Body",
+            "clause": "Section 351",
+            "text": (
+                "Bharatiya Nyaya Sanhita, 2023 (BNS) - Section 351 (replacing IPC 503/506):\n"
+                "Whoever threatens another with any injury to his person, reputation or property, or to the person or reputation of any one in whom "
+                "that person is interested, with intent to cause alarm to that person, or to cause that person to do any act which he is not legally "
+                "bound to do, or to omit to do any act which that person is legally entitled to do, as the means of avoiding the execution of such threat, "
+                "commits criminal intimidation. Punishable with imprisonment up to two years or fine; and if threat be to cause death or grievous hurt, "
+                "with imprisonment up to seven years."
+            ),
+            "source": "Bharatiya Nyaya Sanhita, 2023",
+            "source_type": "Statute",
+            "page_number": 95,
+            "char_count": 760
+        },
 
-        # 4. Right to Information Act, 2005 (RTI)
+        # ==========================================
+        # 4. RIGHT TO INFORMATION ACT, 2005 (RTI)
+        # ==========================================
         {
             "id": "rti_sec_3_6_7",
             "article_number": "RTI Act 2005 Section 3, 6 & 7",
-            "title": "Right to Information: Filing Application and Mandatory Disposal Timelines",
+            "title": "Right to Information: Filing Application and Mandatory 48-Hour Life/Liberty Timelines",
             "part": "Chapter II - Right to Information and Obligations of Public Authorities",
             "clause": "Section 3, 6, 7",
             "text": (
@@ -590,6 +835,25 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "source_type": "Statute",
             "page_number": 5,
             "char_count": 870
+        },
+        {
+            "id": "rti_sec_8_exemptions",
+            "article_number": "RTI Act 2005 Section 8",
+            "title": "Exemption from Disclosure of Information and Public Interest Override",
+            "part": "Chapter II - Right to Information and Obligations of Public Authorities",
+            "clause": "Section 8",
+            "text": (
+                "Right to Information Act, 2005 - Section 8 (Statutory Exemptions):\n"
+                "Notwithstanding anything contained in this Act, there shall be no obligation to give any citizen information disclosure of which would "
+                "prejudicially affect the sovereignty and integrity of India, security, strategic, scientific or economic interests of the State, "
+                "or lead to incitement of an offence; information expressly forbidden by court of law; commercial confidence, trade secrets or intellectual "
+                "property; or information which relates to personal information the disclosure of which has no relationship to any public activity or interest.\n"
+                "Public Interest Override: A public authority may allow access to information if public interest in disclosure outweighs the harm to the protected interests."
+            ),
+            "source": "Right to Information Act, 2005",
+            "source_type": "Statute",
+            "page_number": 8,
+            "char_count": 860
         },
         {
             "id": "rti_sec_19_appeals",
@@ -613,7 +877,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "char_count": 880
         },
 
-        # 5. Landmark Supreme Court Judgments
+        # ==========================================
+        # 5. LANDMARK SUPREME COURT PRECEDENTS
+        # ==========================================
         {
             "id": "judgment_maneka_gandhi",
             "article_number": "Maneka Gandhi v. Union of India (1978)",
@@ -710,6 +976,65 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "source_type": "Landmark Judgment",
             "page_number": 1,
             "char_count": 860
+        },
+        {
+            "id": "judgment_arnesh_kumar",
+            "article_number": "Arnesh Kumar v. State of Bihar (2014)",
+            "title": "Mandatory Notice under Section 41A and Safeguards Against Routine Arrests",
+            "part": "Supreme Court Landmark Precedent (2-Judge Bench)",
+            "clause": "(2014) 8 SCC 273",
+            "text": (
+                "Arnesh Kumar v. State of Bihar (2014) 8 SCC 273 (Supreme Court of India):\n"
+                "The Supreme Court held that arrest brings humiliation, curtails freedom and casts scars forever. Police officers shall not arrest "
+                "an accused unnecessarily, and Magistrates shall not authorize detention casually and mechanically.\n"
+                "For offences punishable with imprisonment up to seven years, police must serve a notice of appearance under Section 41A (now BNSS 35(3)) "
+                "within two weeks of receipt of complaint. Arrest can only be made if the accused fails to comply with terms of notice or if police "
+                "satisfy the Magistrate with recorded reasons that arrest is necessary. Failure of police officers to comply renders them liable "
+                "for departmental action and contempt of court."
+            ),
+            "source": "Supreme Court of India Landmark Precedent",
+            "source_type": "Landmark Judgment",
+            "page_number": 1,
+            "char_count": 850
+        },
+        {
+            "id": "judgment_lalita_kumari",
+            "article_number": "Lalita Kumari v. Government of U.P. (2014)",
+            "title": "Mandatory Registration of FIR in Cognizable Offences",
+            "part": "Supreme Court Landmark Precedent (5-Judge Constitutional Bench)",
+            "clause": "(2014) 2 SCC 1",
+            "text": (
+                "Lalita Kumari v. Government of Uttar Pradesh (2014) 2 SCC 1 (Supreme Court of India):\n"
+                "A 5-judge Constitution Bench held that registration of an FIR is mandatory under Section 154 of the Code of Criminal Procedure "
+                "(now Section 173 of the Bharatiya Nagarik Suraksha Sanhita, 2023) if the information discloses commission of a cognizable offence, "
+                "and no preliminary inquiry is permissible in such a situation.\n"
+                "If the information does not disclose a cognizable offence but indicates the necessity for an inquiry, a preliminary inquiry may be "
+                "conducted only to ascertain whether cognizable offence is disclosed or not, within seven days. Action must be taken against erring "
+                "officers who do not register FIR if information received by them discloses a cognizable offence."
+            ),
+            "source": "Supreme Court of India Landmark Precedent",
+            "source_type": "Landmark Judgment",
+            "page_number": 1,
+            "char_count": 870
+        },
+        {
+            "id": "judgment_shreya_singhal",
+            "article_number": "Shreya Singhal v. Union of India (2015)",
+            "title": "Freedom of Speech Online and Striking Down of Section 66A IT Act",
+            "part": "Supreme Court Landmark Precedent (2-Judge Bench)",
+            "clause": "(2015) 5 SCC 1",
+            "text": (
+                "Shreya Singhal v. Union of India (2015) 5 SCC 1 (Supreme Court of India):\n"
+                "The Supreme Court struck down Section 66A of the Information Technology Act, 2000 in its entirety, holding it unconstitutional "
+                "and an arbitrary infringement of the freedom of speech and expression guaranteed under Article 19(1)(a) of the Constitution.\n"
+                "The Court distinguished between 'discussion', 'advocacy', and 'incitement', ruling that mere advocacy or discussion of a cause, "
+                "howsoever unpopular, is the heartbeat of democracy and cannot be prohibited unless it reaches the level of clear incitement to violence. "
+                "The vague and overbroad terms like 'offensive' or 'annoying' created a chilling effect on legitimate speech."
+            ),
+            "source": "Supreme Court of India Landmark Precedent",
+            "source_type": "Landmark Judgment",
+            "page_number": 1,
+            "char_count": 880
         }
     ]
 

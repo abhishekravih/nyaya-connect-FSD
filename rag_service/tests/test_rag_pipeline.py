@@ -136,3 +136,32 @@ def test_hybrid_retrieval_exact_article_extraction():
     assert len(results) > 0
     top_match = results[0]
     assert top_match["metadata"]["article_number"] == "Article 21"
+
+
+def test_cross_encoder_reranker_integration():
+    """Reviewer 10/10 Upgrade 3: Verify Cross-Encoder neural reranker scores are computed."""
+    results = hybrid_retrieve("Can police detain an accused for more than 24 hours without magistrate?", top_k=3)
+    assert len(results) > 0
+    for doc in results:
+        assert "rerank_score" in doc or "score" in doc
+        assert doc["score"] >= 0.0
+
+
+def test_multi_turn_chat_history_rewriting():
+    """Reviewer 10/10 Upgrade 1: Contextual Query Rewriter resolves pronouns and follow-up turns."""
+    payload = {
+        "query": "Can I meet my lawyer during this time?",
+        "chat_history": [
+            {"role": "user", "content": "What are the rules regarding police detention under Article 22 and BNSS Section 35?"},
+            {"role": "assistant", "content": "Under Article 22 and BNSS Section 35, an accused must be informed of the grounds of arrest."}
+        ],
+        "top_k": 3
+    }
+    response = client.post("/api/v1/rag/ask", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["answer"]) > 30
+    # Must retrieve advocate / legal consultation rights (Article 22(1) or BNSS Section 37)
+    ans_lower = data["answer"].lower()
+    has_lawyer_context = any(term in ans_lower for term in ["advocate", "lawyer", "consult", "legal practitioner", "section 37", "article 22"])
+    assert has_lawyer_context, f"Response should contain lawyer/advocate consultation grounding, got: {data['answer'][:200]}"

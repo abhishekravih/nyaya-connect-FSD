@@ -40,6 +40,9 @@ venv.bak/
 # Database & Vector DB
 *.sqlite
 *.sqlite3
+*.db
+*.db-wal
+*.db-shm
 chroma_db/
 !rag_service/chroma_db/.gitkeep
 
