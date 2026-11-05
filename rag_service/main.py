@@ -8,10 +8,15 @@ import os
 import time
 import json
 import sqlite3
+import hashlib
+import asyncio
+import threading
 import logging
+from collections import defaultdict
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from rag_chain import RAGLegalResponse, ask_constitutional_rag, MODEL_NAME
@@ -39,6 +44,39 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Reviewer Requirement 7: Rate limiting & Request Timeout
+REQUEST_TIMEOUT_SECONDS = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "30.0"))
+RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+_client_request_history: Dict[str, List[float]] = defaultdict(list)
+_rate_limit_lock = threading.Lock()
+
+@app.middleware("http")
+async def rate_limit_and_timeout_middleware(request: Request, call_next):
+    # Reviewer Item 7: Rate limit (60 requests/minute per client IP)
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    
+    if request.url.path.startswith("/api/v1/rag/ask"):
+        with _rate_limit_lock:
+            history = [t for t in _client_request_history[client_ip] if now - t < 60.0]
+            if len(history) >= RATE_LIMIT_PER_MINUTE:
+                return JSONResponse(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    content={"detail": f"Rate limit exceeded: maximum {RATE_LIMIT_PER_MINUTE} requests per minute."}
+                )
+            history.append(now)
+            _client_request_history[client_ip] = history
+
+    # Reviewer Item 7: Request processing timeout (30 seconds)
+    try:
+        return await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        logger.error(f"Request timeout after {REQUEST_TIMEOUT_SECONDS}s for {request.url.path}")
+        return JSONResponse(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            content={"detail": f"Request processing timed out after {REQUEST_TIMEOUT_SECONDS} seconds."}
+        )
 
 
 # ==========================================
@@ -229,9 +267,10 @@ def ask_legal_question(request: AskRequest):
     """
     clean_query = request.query.strip()
     
-    # Hash prior conversation turns for precise multi-turn cache keys
+    # Hash prior conversation turns using deterministic SHA-256 for worker-safe caching
     hist_repr = json.dumps(request.chat_history, sort_keys=True) if request.chat_history else ""
-    cache_key = f"{request.language}_{clean_query.lower()}_{request.top_k}_{hash(hist_repr)}"
+    hist_hash = hashlib.sha256(hist_repr.encode("utf-8")).hexdigest()[:16]
+    cache_key = f"{request.language}_{clean_query.lower()}_{request.top_k}_{hist_hash}"
 
     cached = _CACHE.get(cache_key)
     if cached:

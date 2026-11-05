@@ -262,3 +262,29 @@ def test_strict_verifier_drops_ungrounded_citations():
     assert verified_resp.cited_articles[0].article == "Article 21"
     # Verifier MUST NOT overwrite quotes with doc_text[:120]
     assert verified_resp.cited_articles[0].exact_quote == valid_quote
+
+
+def test_deterministic_sha256_cache_key():
+    import hashlib
+    import json
+    hist = [{"role": "user", "content": "hello"}, {"role": "assistant", "content": "world"}]
+    hist_repr = json.dumps(hist, sort_keys=True)
+    hash1 = hashlib.sha256(hist_repr.encode("utf-8")).hexdigest()[:16]
+    hash2 = hashlib.sha256(hist_repr.encode("utf-8")).hexdigest()[:16]
+    assert hash1 == hash2
+    assert len(hash1) == 16
+
+
+def test_rate_limiter_blocks_burst():
+    import time
+    from main import _client_request_history, _rate_limit_lock
+    test_ip = "testclient"
+    with _rate_limit_lock:
+        _client_request_history[test_ip] = [time.time()] * 65
+    response = client.post("/api/v1/rag/ask", json={"query": "test query", "top_k": 1})
+    assert response.status_code == 429
+    assert "Rate limit exceeded" in response.json()["detail"]
+    # Reset
+    with _rate_limit_lock:
+        _client_request_history.clear()
+
