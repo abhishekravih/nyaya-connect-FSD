@@ -1,15 +1,30 @@
-# 🇮🇳 NyayaConnect: Official RAG Benchmark Report
+# 🇮🇳 NyayaConnect: Official Legal RAG Benchmark Report
 
-**Date:** November 2026 | **Dataset:** `eval/gold.jsonl` (65 questions)
+**Date:** November 2026 | **Dataset:** `eval/gold.jsonl` (120 benchmark queries) | **Mode:** `Gemini Live API`
 
-## 🎯 Reviewer Metric Gates vs Actual Performance
+## 🎯 Primary Reviewer Metric Gates vs Actual Performance
 
 | Metric | Reviewer Target | Measured Result | Status |
 | :--- | :---: | :---: | :---: |
-| **Recall@5 on Gold Articles** | `≥ 0.90` | **`0.971`** | ✅ PASS |
-| **Mean Reciprocal Rank (MRR)** | `≥ 0.75` | **`0.924`** | ✅ PASS |
-| **Out-of-Scope Refusal Rate** | `≥ 0.90` | **`1.000`** | ✅ PASS |
-| **Citation Validity Rate** | `100%` | **`100.0%`** | ✅ PASS |
-| **Category Accuracy** | `≥ 0.90` | **`0.940`** | ✅ PASS |
+| **Recall@5 on Gold Provisions (Overall)** | `≥ 0.900` | **`0.905`** | ✅ PASS |
+| **Mean Reciprocal Rank (MRR)** | `≥ 0.750` | **`0.853`** | ✅ PASS |
+| **Out-of-Scope Refusal Rate (Overall)** | `≥ 0.900` | **`100.0%`** | ✅ PASS |
+| **Out-of-Scope Near-Miss Refusal** | `≥ 0.900` | **`100.0%`** | ✅ PASS |
+| **Strict Citation Validity (Cited ⊂ Context)** | `100.0%` | **`100.0%`** | ✅ PASS |
+| **Category Accuracy (Independent Labels)** | `≥ 0.900` | **`89.5%`** | ⚠️ ATTN |
 
-Total benchmark run completed in **241.43 seconds** on CPU.
+## 🔬 Sub-Domain & Ablation Breakdowns
+
+| Evaluation Dimension | Sample Count | Recall@5 | MRR | Description |
+| :--- | :---: | :---: | :---: | :--- |
+| **Statutory Enactments (BNSS/BNS/CPA/RTI)** | 94 | **`0.904`** | `0.851` | Measures modern statutes and landmark precedents |
+| **Constitution of India (Articles 1-395)** | 1 | **`1.000`** | `1.000` | Official gazetted text & constitutional schedules |
+| **Implicit Scenarios (No Article Named)** | 47 | **`0.808`** | `0.702` | Real citizen facts without legal terminology |
+| **Test Split (Frozen Evaluation)** | 64 | **`0.938`** | `0.889` | Independent evaluation split |
+| **Dev Split (Threshold Tuning)** | 31 | **`0.839`** | `0.777` | Calibrated cutoff tuning split |
+
+## 🛡️ Code-Level Grounding & Conversational Polish
+
+- **Dropped Citation Rate:** `21.1%` (32 hallucinated or ungrounded quotes dropped without overwriting)
+- **Contextual Query Rewriter Hit Rate:** `100.0%` (15/15 conversational pronoun follow-ups resolved to gold provisions)
+- **Benchmark Wall Time:** `359.84s` on local machine

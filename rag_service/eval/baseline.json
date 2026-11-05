@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-11-05 23:50:51",
+  "run_mode": "Gemini Live API",
+  "total_benchmark_queries": 120,
+  "metrics": {
+    "recall_at_5_overall": 0.9053,
+    "mrr_overall": 0.8526,
+    "recall_at_5_implicit_only": 0.8085,
+    "mrr_implicit_only": 0.7021,
+    "recall_at_5_statutes": 0.9043,
+    "recall_at_5_constitution": 1.0,
+    "test_split_recall_at_5": 0.9375,
+    "dev_split_recall_at_5": 0.8387,
+    "out_of_scope_refusal_rate": 1.0,
+    "near_miss_refusal_rate": 1.0,
+    "citation_validity_rate": 1.0,
+    "dropped_citation_rate": 0.2105,
+    "rewriter_followup_hit_rate": 1.0,
+    "category_accuracy": 0.8947
+  },
+  "counts": {
+    "statute_queries": 94,
+    "implicit_queries": 47,
+    "oos_queries": 25,
+    "near_miss_queries": 10,
+    "followup_turns": 15
+  }
+}
