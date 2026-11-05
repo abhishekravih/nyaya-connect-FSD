@@ -1,0 +1,65 @@
+{"id": 1, "query": "Can the police arrest an individual without informing them of the grounds of arrest?", "gold_articles": ["Article 22"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 2, "query": "A citizen was kept in police custody for 36 hours without being produced before a magistrate.", "gold_articles": ["Article 22"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 3, "query": "Does an arrested person have a constitutional right to consult and be defended by a legal practitioner?", "gold_articles": ["Article 22"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 4, "query": "What constitutional protection exists against being prosecuted and punished twice for the same offence?", "gold_articles": ["Article 20"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 5, "query": "Can an accused person in a criminal trial be compelled to be a witness against himself?", "gold_articles": ["Article 20"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 6, "query": "Under what article can a family member file a Writ of Habeas Corpus for illegal detention in the Supreme Court?", "gold_articles": ["Article 32"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 7, "query": "Can a person be convicted under a criminal law that was enacted after the act was committed?", "gold_articles": ["Article 20"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 8, "query": "A 12-year-old child is employed in a hazardous glass factory. Which fundamental right is violated?", "gold_articles": ["Article 24"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 9, "query": "What are the constitutional requirements when an authority places someone under preventive detention?", "gold_articles": ["Article 22"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 10, "query": "Does custodial torture and physical violence by police violate Article 21?", "gold_articles": ["Article 21"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 11, "query": "Is human trafficking and forced begar strictly prohibited by the Constitution?", "gold_articles": ["Article 23"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 12, "query": "Can a citizen challenge an unlawful police encounter or extrajudicial execution under Article 21?", "gold_articles": ["Article 21"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 13, "query": "What happens if a police officer refuses to produce an arrestee within 24 hours excluding journey time?", "gold_articles": ["Article 22"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 14, "query": "Does the state have the power to create ex post facto criminal liabilities?", "gold_articles": ["Article 20"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 15, "query": "Can bail conditions be so excessively punitive that they infringe personal liberty under Article 21?", "gold_articles": ["Article 21"], "expected_category": "Criminal", "is_out_of_scope": false}
+{"id": 16, "query": "Can a state university deny admission to a qualified student solely based on their religion or caste?", "gold_articles": ["Article 15"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 17, "query": "What are the permissible grounds for imposing reasonable restrictions on freedom of speech under Article 19?", "gold_articles": ["Article 19"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 18, "query": "Can a citizen file a Writ of Mandamus in the High Court under Article 226 against a public authority?", "gold_articles": ["Article 226"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 19, "query": "What constitutional provisions guarantee equality before the law and equal protection of laws to all persons?", "gold_articles": ["Article 14"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 20, "query": "Does the Constitution guarantee the right to freely profess, practice, and propagate religion?", "gold_articles": ["Article 25"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 21, "query": "What direct remedies can a citizen invoke before the Supreme Court under Article 32 for fundamental rights enforcement?", "gold_articles": ["Article 32"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 22, "query": "Can a citizen be discriminated against in matters of public employment on grounds of descent or place of birth?", "gold_articles": ["Article 16"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 23, "query": "What does Article 21A provide regarding free and compulsory education for children between six and fourteen?", "gold_articles": ["Article 21A"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 24, "query": "What does the Preamble declare regarding securing justice, liberty, equality, and fraternity?", "gold_articles": ["Preamble"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 25, "query": "Can religious or linguistic minorities establish and administer educational institutions of their choice?", "gold_articles": ["Article 30"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 26, "query": "Does the Constitution abolish Untouchability and forbid its practice in any form under Article 17?", "gold_articles": ["Article 17"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 27, "query": "Can titles of nobility be conferred by the Indian State under Article 18?", "gold_articles": ["Article 18"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 28, "query": "What are the Fundamental Duties of every citizen of India under Article 51A?", "gold_articles": ["Article 51A"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 29, "query": "What does Article 39A specify regarding equal justice and free legal aid for impoverished citizens?", "gold_articles": ["Article 39A"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 30, "query": "Can a citizen assemble peaceably and without arms to protest under Article 19(1)(b)?", "gold_articles": ["Article 19"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 31, "query": "What is the procedure for amending the Constitution of India under Article 368?", "gold_articles": ["Article 368"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 32, "query": "What legislative subjects are allocated between the Union and the States under the Seventh Schedule?", "gold_articles": ["Seventh Schedule", "Article 246"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 33, "query": "Can an individual approach the High Court under Article 226 for violations of ordinary legal rights as well as fundamental rights?", "gold_articles": ["Article 226"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 34, "query": "Does unauthorized state interception of personal communications violate privacy under Article 21?", "gold_articles": ["Article 21"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 35, "query": "Can the right to move the Supreme Court under Article 32 be suspended during normal peacetime?", "gold_articles": ["Article 32"], "expected_category": "Civil", "is_out_of_scope": false}
+{"id": 36, "query": "A consumer purchased a brand new television that stopped displaying pictures within 2 days, and the retailer refused a refund.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 37, "query": "An e-commerce marketplace sent an empty box instead of a smartphone and cancelled customer support tickets.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 38, "query": "A private hospital overbilled an insured patient for medicines that were never administered during admission.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 39, "query": "An airline cancelled an international flight with no refund and refused hotel accommodations.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 40, "query": "A commercial builder collected 95% of payment for an apartment flat but failed to deliver possession for 5 years.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 41, "query": "An automobile company refused to honor warranty for a car delivered with an inherently defective transmission unit.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 42, "query": "A manufacturer published misleading advertisements claiming their tonic cures chronic baldness in 7 days.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 43, "query": "A supermarket sold expired infant baby formula resulting in child hospitalization.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 44, "query": "An insurance company repudiated a valid health insurance claim citing an uncommunicated exclusion clause.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 45, "query": "A broadband internet provider debited subscription fees continuously after the customer submitted cancellation.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 46, "query": "A coaching institute accepted full non-refundable fees upfront and closed down after two classes.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 47, "query": "A refrigerator compressor exploded during standard usage due to manufacturing defects.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 48, "query": "A courier company lost an original passport consignment and offered only twenty rupees compensation.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 49, "query": "A pharmacy sold counterfeit medication with incorrect chemical active ingredients.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 50, "query": "A bank levied unauthorized penalties for minimum balance breach despite account being salary-linked.", "gold_articles": [], "expected_category": "Consumer", "is_out_of_scope": false}
+{"id": 51, "query": "How do I bake a chocolate chip cookie at home?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 52, "query": "Who won the cricket match between India and Australia yesterday?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 53, "query": "Write a Python function to invert a binary tree.", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 54, "query": "What is the capital city of France?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 55, "query": "Can you give me a recipe for authentic chicken biryani?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 56, "query": "Who is the CEO of Tesla and SpaceX?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 57, "query": "What is the distance between the Earth and the Moon in kilometers?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 58, "query": "How do I fix a leaking bathroom faucet with a screwdriver?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 59, "query": "Who won the 2024 FIFA Ballon d'Or award?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 60, "query": "Can you debug this C++ segmentation fault code snippet for me?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 61, "query": "What is the plot summary of Christopher Nolan's movie Inception?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 62, "query": "What is the weather forecast in London next weekend?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 63, "query": "How do I tune a six-string acoustic guitar by ear?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 64, "query": "What is the best prompt to generate anime art on Midjourney?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}
+{"id": 65, "query": "Can you tell me how to build a gaming PC with RTX 4090?", "gold_articles": [], "expected_category": "Civil", "is_out_of_scope": true}

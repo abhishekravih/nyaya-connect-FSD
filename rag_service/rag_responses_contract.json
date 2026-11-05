@@ -1,48 +1,89 @@
 [
   {
     "query": "A citizen was detained by the police for 48 hours without being presented before a magistrate. What are their constitutional rights?",
-    "answer": "Under Article 22(2) of the Constitution of India, every person arrested and detained in custody must be produced before the nearest magistrate within twenty-four hours of such arrest, excluding the time necessary for the journey from the place of arrest to the court. Detention beyond this period without the authority of a magistrate is a violation of this fundamental right. Additionally, under Article 22(1), the arrested person has the right to be informed of the grounds of arrest and the right to consult and be defended by a legal practitioner of their choice.",
+    "answer": "Under Article 22(2) of the Constitution of India and Section 58 of the Bharatiya Nagarik Suraksha Sanhita (BNSS), 2023, every person arrested and detained in custody must be produced before the nearest magistrate within 24 hours of their arrest, excluding the time necessary for the journey from the place of arrest to the magistrate's court. Detention beyond this 24-hour period without the authority of a magistrate is unlawful and constitutes a violation of fundamental rights, which may be challenged through a Writ of Habeas Corpus.",
     "cited_articles": [
       {
-        "article": "Article 22(1)",
-        "part": "Part III - Fundamental Rights",
-        "exact_quote": "No person who is arrested shall be detained in custody without being informed, as soon as may be, of the grounds for such arrest nor shall he be denied the right to consult, and to be defended by, a legal practitioner of his choice."
+        "article": "Article 22(2)",
+        "part": "Part III – Fundamental Rights",
+        "exact_quote": "Every person who is arrested and detained in custody shall be produced before the nearest magistrate within a period of twenty-four hours of such arrest excluding the time necessary for the journey from the place of arrest to the court of the magistrate and no such person shall be detained in custody beyond the said period without the authority of a magistrate."
       },
       {
-        "article": "Article 22(2)",
-        "part": "Part III - Fundamental Rights",
-        "exact_quote": "Every person who is arrested and detained in custody shall be produced before the nearest magistrate within a period of twenty-four hours of such arrest excluding the time necessary for the journey from the place of arrest to the court of the magistrate and no such person shall be detained in custody beyond the said period without the authority of a magistrate."
+        "article": "BNSS 2023 Section 58",
+        "part": "Chapter V - Arrest of Persons",
+        "exact_quote": "No police officer shall detain in custody a person arrested without warrant for a longer period than under all the circumstances of the case is reasonable, and such period shall not, in the absence of a special order of a Magistrate under section 187, exceed twenty-four hours exclusive of the time necessary for the journey from the place of arrest to the Magistrate's Court."
       }
     ],
     "recommended_case_category": "Criminal",
     "urgency_level": "High",
-    "suggested_action": "Immediately file a petition for Habeas Corpus before the jurisdictional High Court or Supreme Court under Article 226 or Article 32, and contact a criminal defense lawyer to seek immediate production before a magistrate."
+    "suggested_action": "File a Writ Petition of Habeas Corpus before the High Court or Supreme Court immediately to challenge the unlawful detention and seek the production of the detainee before a magistrate.",
+    "consult_lawyer_immediately": true,
+    "disclaimer": "This information is for educational purposes and does not constitute formal legal advice. Please consult with a qualified advocate immediately regarding urgent matters of personal liberty.",
+    "explanation": "Under Article 22(2) of the Constitution of India and Section 58 of the Bharatiya Nagarik Suraksha Sanhita (BNSS), 2023, every person arrested and detained in custody must be produced before the nearest magistrate within 24 hours of their arrest, excluding the time necessary for the journey from the place of arrest to the magistrate's court. Detention beyond this 24-hour period without the authority of a magistrate is unlawful and constitutes a violation of fundamental rights, which may be challenged through a Writ of Habeas Corpus.",
+    "articles": [
+      {
+        "article_number": "Article 22(2)",
+        "title": "Part III – Fundamental Rights",
+        "relevance_summary": "Every person who is arrested and detained in custody shall be produced before the nearest magistrate within a period of twenty-four hours of such arrest excluding the time necessary for the journey from the place of arrest to the court of the magistrate and no such person shall be detained in custody beyond the said period without the authority of a magistrate."
+      },
+      {
+        "article_number": "BNSS 2023 Section 58",
+        "title": "Chapter V - Arrest of Persons",
+        "relevance_summary": "No police officer shall detain in custody a person arrested without warrant for a longer period than under all the circumstances of the case is reasonable, and such period shall not, in the absence of a special order of a Magistrate under section 187, exceed twenty-four hours exclusive of the time necessary for the journey from the place of arrest to the Magistrate's Court."
+      }
+    ]
   },
   {
     "query": "Can a state university deny admission to a qualified applicant solely because of their religion or caste?",
-    "answer": "The provided Constitutional provisions do not contain sufficient information to answer this query with high confidence. The matter falls outside direct constitutional provisions and requires specific statutory remedies.",
-    "cited_articles": [],
+    "answer": "No, a state university cannot deny admission to a qualified applicant solely on the grounds of religion, race, caste, or language. Article 29(2) of the Constitution of India explicitly mandates that no citizen shall be denied admission into any educational institution maintained by the State or receiving aid out of State funds on these grounds.",
+    "cited_articles": [
+      {
+        "article": "Article 29(2)",
+        "part": "Part III – Fundamental Rights",
+        "exact_quote": "No citizen shall be denied admission into any educational institution maintained by the State or receiving aid out of State funds on grounds only of religion, race, caste, language or any of them."
+      }
+    ],
     "recommended_case_category": "Civil",
     "urgency_level": "Medium",
-    "suggested_action": "Approach the District Legal Services Authority (DLSA) or file a Writ Petition under Article 226/32 before the High Court."
+    "suggested_action": "File a writ petition under Article 226 of the Constitution before the jurisdictional High Court seeking a writ of mandamus to compel the university to consider the admission application.",
+    "consult_lawyer_immediately": false,
+    "disclaimer": "This information is for educational purposes and does not constitute formal legal advice. Please consult with a qualified advocate for specific legal representation.",
+    "explanation": "No, a state university cannot deny admission to a qualified applicant solely on the grounds of religion, race, caste, or language. Article 29(2) of the Constitution of India explicitly mandates that no citizen shall be denied admission into any educational institution maintained by the State or receiving aid out of State funds on these grounds.",
+    "articles": [
+      {
+        "article_number": "Article 29(2)",
+        "title": "Part III – Fundamental Rights",
+        "relevance_summary": "No citizen shall be denied admission into any educational institution maintained by the State or receiving aid out of State funds on grounds only of religion, race, caste, language or any of them."
+      }
+    ]
   },
   {
     "query": "Does unauthorized state tapping of a citizen's mobile phone violate Article 21?",
-    "answer": "Article 21 of the Constitution of India guarantees that no person shall be deprived of his life or personal liberty except according to procedure established by law. The right to privacy has been interpreted by the judiciary as an integral component of the right to life and personal liberty under this Article. Unauthorized state surveillance or phone tapping, if not conducted in accordance with a valid procedure established by law, constitutes an infringement of this fundamental right.",
+    "answer": "Article 21 of the Constitution of India guarantees that no person shall be deprived of his life or personal liberty except according to procedure established by law. While the provided text of Article 21 does not explicitly mention phone tapping, the constitutional protection of personal liberty is the foundational provision under which the right to privacy is protected against unauthorized state interference.",
     "cited_articles": [
       {
         "article": "Article 21",
-        "part": "Part III - Fundamental Rights",
+        "part": "Part III – Fundamental Rights",
         "exact_quote": "No person shall be deprived of his life or personal liberty except according to procedure established by law."
       }
     ],
     "recommended_case_category": "Civil",
     "urgency_level": "Medium",
-    "suggested_action": "File a Writ Petition under Article 226 before the jurisdictional High Court seeking a writ of mandamus to stop the surveillance and protect the right to privacy."
+    "suggested_action": "File a Writ Petition under Article 226 in the respective High Court or Article 32 in the Supreme Court to challenge the unauthorized surveillance as a violation of fundamental rights.",
+    "consult_lawyer_immediately": false,
+    "disclaimer": "This information is for educational purposes and does not constitute formal legal advice. Please consult with a qualified advocate for specific legal representation.",
+    "explanation": "Article 21 of the Constitution of India guarantees that no person shall be deprived of his life or personal liberty except according to procedure established by law. While the provided text of Article 21 does not explicitly mention phone tapping, the constitutional protection of personal liberty is the foundational provision under which the right to privacy is protected against unauthorized state interference.",
+    "articles": [
+      {
+        "article_number": "Article 21",
+        "title": "Part III – Fundamental Rights",
+        "relevance_summary": "No person shall be deprived of his life or personal liberty except according to procedure established by law."
+      }
+    ]
   },
   {
     "query": "What are the direct remedies available in the Supreme Court for the enforcement of fundamental rights?",
-    "answer": "Under Article 32 of the Constitution of India, citizens have the guaranteed right to move the Supreme Court for the enforcement of their Fundamental Rights. The Supreme Court is empowered to issue directions, orders, or writs—including habeas corpus, mandamus, prohibition, quo warranto, and certiorari—to ensure these rights are protected. This right itself cannot be suspended except as provided by the Constitution.",
+    "answer": "Under Article 32 of the Constitution of India, citizens have the guaranteed right to move the Supreme Court for the enforcement of fundamental rights conferred by Part III. The Supreme Court is empowered to issue directions, orders, or writs, including those in the nature of habeas corpus, mandamus, prohibition, quo warranto, and certiorari, to enforce these rights.",
     "cited_articles": [
       {
         "article": "Article 32(1)",
@@ -56,55 +97,156 @@
       }
     ],
     "recommended_case_category": "Civil",
-    "urgency_level": "Medium",
-    "suggested_action": "File a Writ Petition under Article 32 of the Constitution of India before the Supreme Court of India for the enforcement of your fundamental rights."
+    "urgency_level": "Low",
+    "suggested_action": "Consult with a legal professional to draft and file a Writ Petition under Article 32 of the Constitution of India before the Supreme Court.",
+    "consult_lawyer_immediately": false,
+    "disclaimer": "This information is for educational purposes and does not constitute formal legal advice. Please consult with a qualified advocate for your specific legal matter.",
+    "explanation": "Under Article 32 of the Constitution of India, citizens have the guaranteed right to move the Supreme Court for the enforcement of fundamental rights conferred by Part III. The Supreme Court is empowered to issue directions, orders, or writs, including those in the nature of habeas corpus, mandamus, prohibition, quo warranto, and certiorari, to enforce these rights.",
+    "articles": [
+      {
+        "article_number": "Article 32(1)",
+        "title": "Part III - Fundamental Rights",
+        "relevance_summary": "The right to move the Supreme Court by appropriate proceedings for the enforcement of the rights conferred by this Part is guaranteed."
+      },
+      {
+        "article_number": "Article 32(2)",
+        "title": "Part III - Fundamental Rights",
+        "relevance_summary": "The Supreme Court shall have power to issue directions or orders or writs, including writs in the nature of habeas corpus, mandamus, prohibition, quo warranto and certiorari, whichever may be appropriate, for the enforcement of any of the rights conferred by this Part."
+      }
+    ]
   },
   {
     "query": "Can the state prohibit peaceful, unarmed assembly of citizens protesting a local grievance?",
-    "answer": "The provided Constitutional provisions do not contain sufficient information to answer this query with high confidence. The matter falls outside direct constitutional provisions and requires specific statutory remedies.",
+    "answer": "The provided Indian legal corpus does not contain sufficient verified textual grounding to answer this query. The query falls outside Indian constitutional and statutory provisions.",
     "cited_articles": [],
     "recommended_case_category": "Civil",
     "urgency_level": "Low",
-    "suggested_action": "Approach the District Legal Services Authority (DLSA) or file a Writ Petition under Article 226/32 before the High Court."
+    "suggested_action": "Consult with a legal professional or a local District Legal Services Authority (DLSA) for guidance on constitutional rights regarding assembly and protest.",
+    "consult_lawyer_immediately": false,
+    "disclaimer": "This information is for educational purposes only and does not constitute formal legal advice. Please consult with a qualified advocate for your specific legal situation.",
+    "explanation": "The provided Indian legal corpus does not contain sufficient verified textual grounding to answer this query. The query falls outside Indian constitutional and statutory provisions.",
+    "articles": []
   },
   {
     "query": "A consumer bought a brand new washing machine that malfunctioned immediately, and the dealer refused a refund or repair.",
-    "answer": "The Constitution of India does not directly govern private commercial, consumer, or contractual disputes. This matter is governed by specific statutory codes such as the Consumer Protection Act, 2019.",
-    "cited_articles": [],
+    "answer": "Under the Consumer Protection Act, 2019, a 'consumer' is defined as a person who buys goods for consideration. A 'defect' refers to any fault or imperfection in the quality or standard of the goods. Since the washing machine malfunctioned immediately, it constitutes a defect. Section 39 of the CPA 2019 empowers the District Consumer Disputes Redressal Commission to order the opposite party (the dealer/manufacturer) to remove the defect, replace the goods, or refund the price paid. Furthermore, under Section 82, a product liability action can be brought against a manufacturer or seller for harm caused by a defective product.",
+    "cited_articles": [
+      {
+        "article": "CPA 2019 Section 2(7)",
+        "part": "Chapter I - Preliminary",
+        "exact_quote": "'consumer' means any person who buys any goods or hires or avails of any services for a consideration"
+      },
+      {
+        "article": "CPA 2019 Section 2(10)",
+        "part": "Chapter I - Preliminary",
+        "exact_quote": "'defect' means any fault, imperfection or shortcoming in the quality, quantity, potency, purity or standard"
+      },
+      {
+        "article": "CPA 2019 Section 39",
+        "part": "Chapter IV - Consumer Disputes Redressal Commission",
+        "exact_quote": "If the District Commission is satisfied that the goods complained against suffer from any defect... it shall issue an order directing the opposite party to... replace the goods... [or] return to the complainant the price or consideration paid"
+      },
+      {
+        "article": "CPA 2019 Section 82",
+        "part": "Chapter VI - Product Liability",
+        "exact_quote": "A product liability action may be brought by a complainant against a product manufacturer or a product service provider or a product seller, as the case may be, for any harm caused to him on account of a defective product."
+      }
+    ],
     "recommended_case_category": "Consumer",
     "urgency_level": "Medium",
-    "suggested_action": "File a consumer grievance on the National Consumer Helpline (NCH) or approach the District Consumer Disputes Redressal Commission."
+    "suggested_action": "File a formal consumer complaint before the District Consumer Disputes Redressal Commission having jurisdiction over your area or the dealer's location, or initiate the process electronically via the e-Daakhil portal.",
+    "consult_lawyer_immediately": false,
+    "disclaimer": "This information is for educational purposes and does not constitute formal legal advice. Please consult with a qualified advocate or the District Legal Services Authority for specific legal representation.",
+    "explanation": "Under the Consumer Protection Act, 2019, a 'consumer' is defined as a person who buys goods for consideration. A 'defect' refers to any fault or imperfection in the quality or standard of the goods. Since the washing machine malfunctioned immediately, it constitutes a defect. Section 39 of the CPA 2019 empowers the District Consumer Disputes Redressal Commission to order the opposite party (the dealer/manufacturer) to remove the defect, replace the goods, or refund the price paid. Furthermore, under Section 82, a product liability action can be brought against a manufacturer or seller for harm caused by a defective product.",
+    "articles": [
+      {
+        "article_number": "CPA 2019 Section 2(7)",
+        "title": "Chapter I - Preliminary",
+        "relevance_summary": "'consumer' means any person who buys any goods or hires or avails of any services for a consideration"
+      },
+      {
+        "article_number": "CPA 2019 Section 2(10)",
+        "title": "Chapter I - Preliminary",
+        "relevance_summary": "'defect' means any fault, imperfection or shortcoming in the quality, quantity, potency, purity or standard"
+      },
+      {
+        "article_number": "CPA 2019 Section 39",
+        "title": "Chapter IV - Consumer Disputes Redressal Commission",
+        "relevance_summary": "If the District Commission is satisfied that the goods complained against suffer from any defect... it shall issue an order directing the opposite party to... replace the goods... [or] return to the complainant the price or consideration paid"
+      },
+      {
+        "article_number": "CPA 2019 Section 82",
+        "title": "Chapter VI - Product Liability",
+        "relevance_summary": "A product liability action may be brought by a complainant against a product manufacturer or a product service provider or a product seller, as the case may be, for any harm caused to him on account of a defective product."
+      }
+    ]
   },
   {
     "query": "A 12-year-old child is being forced to work 10 hours a day in a firecracker manufacturing unit.",
-    "answer": "The provided Constitutional provisions do not contain sufficient information to answer this query with high confidence. The matter falls outside direct constitutional provisions and requires specific statutory remedies.",
-    "cited_articles": [],
+    "answer": "The employment of a child below the age of fourteen years in any factory, mine, or hazardous employment is strictly prohibited under Article 24 of the Constitution of India. Furthermore, Article 39(e) and (f) mandate that the State direct its policy to ensure that the health and strength of children are not abused and that they are protected against exploitation and material abandonment. Forcing a 12-year-old to work in a firecracker unit, which is a hazardous environment, is a direct violation of these constitutional protections.",
+    "cited_articles": [
+      {
+        "article": "Article 24",
+        "part": "Part III - Fundamental Rights",
+        "exact_quote": "No child below the age of fourteen years shall be employed to work in any factory or mine or engaged in any other hazardous employment."
+      },
+      {
+        "article": "Article 39",
+        "part": "Part IV - Directive Principles of State Policy",
+        "exact_quote": "The State shall, in particular, direct its policy towards securing— (e) that the health and strength of workers, men and women, and the tender age of children are not abused and that citizens are not forced by economic necessity to enter avocations unsuited to their age or strength; (f) that children are given opportunities and facilities to develop in a healthy manner and in conditions of freedom and dignity and that childhood and youth are protected against exploitation and against moral and material abandonment."
+      }
+    ],
     "recommended_case_category": "Criminal",
     "urgency_level": "High",
-    "suggested_action": "Seek immediate legal counsel to file a Bail application or petition for a Writ of Habeas Corpus under Article 226/32."
+    "suggested_action": "Immediately report the incident to the local police station, the District Child Protection Unit (DCPU), or the Childline (1098) to ensure the child's rescue and rehabilitation.",
+    "consult_lawyer_immediately": true,
+    "disclaimer": "This information is for educational purposes and does not constitute formal legal advice. Please consult with a qualified advocate or contact the District Legal Services Authority (DLSA) for professional assistance.",
+    "explanation": "The employment of a child below the age of fourteen years in any factory, mine, or hazardous employment is strictly prohibited under Article 24 of the Constitution of India. Furthermore, Article 39(e) and (f) mandate that the State direct its policy to ensure that the health and strength of children are not abused and that they are protected against exploitation and material abandonment. Forcing a 12-year-old to work in a firecracker unit, which is a hazardous environment, is a direct violation of these constitutional protections.",
+    "articles": [
+      {
+        "article_number": "Article 24",
+        "title": "Part III - Fundamental Rights",
+        "relevance_summary": "No child below the age of fourteen years shall be employed to work in any factory or mine or engaged in any other hazardous employment."
+      },
+      {
+        "article_number": "Article 39",
+        "title": "Part IV - Directive Principles of State Policy",
+        "relevance_summary": "The State shall, in particular, direct its policy towards securing— (e) that the health and strength of workers, men and women, and the tender age of children are not abused and that citizens are not forced by economic necessity to enter avocations unsuited to their age or strength; (f) that children are given opportunities and facilities to develop in a healthy manner and in conditions of freedom and dignity and that childhood and youth are protected against exploitation and against moral and material abandonment."
+      }
+    ]
   },
   {
     "query": "What does the Preamble of the Constitution of India declare regarding justice, liberty, and equality?",
-    "answer": "The Preamble of the Constitution of India solemnly resolves to secure to all its citizens justice (social, economic, and political), liberty (of thought, expression, belief, faith, and worship), and equality (of status and of opportunity).",
+    "answer": "The Preamble to the Constitution of India solemnly resolves to secure to all its citizens: JUSTICE, social, economic and political; LIBERTY of thought, expression, belief, faith and worship; and EQUALITY of status and of opportunity.",
     "cited_articles": [
       {
-        "article": "Preamble",
+        "article": "Preamble to the Constitution of India",
         "part": null,
-        "exact_quote": "WE, THE PEOPLE OF INDIA, having solemnly resolved to constitute India into a SOVEREIGN SOCIALIST SECULAR DEMOCRATIC REPUBLIC and to secure to all its citizens: JUSTICE, social, economic and political; LIBERTY of thought, expression, belief, faith and worship; EQUALITY of status and of opportunity; and to promote among them all FRATERNITY assuring the dignity of the individual and the unity and integrity of the Nation"
+        "exact_quote": "WE, THE PEOPLE OF INDIA, having solemnly resolved to constitute India into a SOVEREIGN SOCIALIST SECULAR DEMOCRATIC REPUBLIC and to secure to all its citizens: JUSTICE, social, economic and political; LIBERTY of thought, expression, belief, faith and worship; EQUALITY of status and of opportunity"
       }
     ],
     "recommended_case_category": "Civil",
     "urgency_level": "Low",
-    "suggested_action": "The Preamble serves as a guiding principle for the interpretation of the Constitution; for specific grievances regarding these rights, one may seek legal counsel to explore remedies under Fundamental Rights provisions."
+    "suggested_action": "No legal action is required as this is an inquiry regarding constitutional principles.",
+    "consult_lawyer_immediately": false,
+    "disclaimer": "This information is for educational purposes only and does not constitute legal advice. Please consult a qualified legal professional for specific legal concerns.",
+    "explanation": "The Preamble to the Constitution of India solemnly resolves to secure to all its citizens: JUSTICE, social, economic and political; LIBERTY of thought, expression, belief, faith and worship; and EQUALITY of status and of opportunity.",
+    "articles": [
+      {
+        "article_number": "Preamble to the Constitution of India",
+        "title": null,
+        "relevance_summary": "WE, THE PEOPLE OF INDIA, having solemnly resolved to constitute India into a SOVEREIGN SOCIALIST SECULAR DEMOCRATIC REPUBLIC and to secure to all its citizens: JUSTICE, social, economic and political; LIBERTY of thought, expression, belief, faith and worship; EQUALITY of status and of opportunity"
+      }
+    ]
   },
   {
     "query": "Can an individual approach the High Court under Article 226 if their civil rights are violated by a government municipal body?",
-    "answer": "Yes, an individual can approach the High Court under Article 226. The Constitution empowers every High Court to issue directions, orders, or writs—including writs in the nature of habeas corpus, mandamus, prohibition, quo warranto, and certiorari—to any person or authority, including any Government, for the enforcement of rights conferred by Part III or for any other purpose, provided the cause of action arises within the High Court's territorial jurisdiction.",
+    "answer": "Yes, an individual can approach the High Court under Article 226 of the Constitution of India. Article 226(1) empowers every High Court to issue directions, orders, or writs—including writs in the nature of habeas corpus, mandamus, prohibition, quo warranto, and certiorari—to any person or authority, including any Government, for the enforcement of rights conferred by Part III of the Constitution or for any other purpose. This power can be exercised by a High Court in relation to the territories within which the cause of action, wholly or in part, arises, even if the seat of the government or authority is outside those territories.",
     "cited_articles": [
       {
         "article": "Article 226(1)",
         "part": "Part VI - The States",
-        "exact_quote": "every High Court shall have power, throughout the territories in relation to which it exercises jurisdiction, to issue to any person or authority, including in appropriate cases, any Government, within those territories directions, orders or writs... for the enforcement of any of the rights conferred by Part III and for any other purpose."
+        "exact_quote": "every High Court shall have power, throughout the territories in relation to which it exercises jurisdiction, to issue to any person or authority, including in appropriate cases, any Government, within those territories directions, orders or writs, including writs in the nature of habeas corpus, mandamus, prohibition, quo warranto and certiorari, or any of them, for the enforcement of any of the rights conferred by Part III and for any other purpose."
       },
       {
         "article": "Article 226(2)",
@@ -114,14 +256,45 @@
     ],
     "recommended_case_category": "Civil",
     "urgency_level": "Medium",
-    "suggested_action": "Consult with a legal practitioner to draft and file a Writ Petition under Article 226 of the Constitution of India before the jurisdictional High Court, detailing the specific violation of rights by the municipal body."
+    "suggested_action": "File a Writ Petition under Article 226 of the Constitution of India before the jurisdictional High Court to seek appropriate relief against the municipal body.",
+    "consult_lawyer_immediately": false,
+    "disclaimer": "This information is for educational purposes and does not constitute formal legal advice. Please consult with a qualified advocate for specific legal representation.",
+    "explanation": "Yes, an individual can approach the High Court under Article 226 of the Constitution of India. Article 226(1) empowers every High Court to issue directions, orders, or writs—including writs in the nature of habeas corpus, mandamus, prohibition, quo warranto, and certiorari—to any person or authority, including any Government, for the enforcement of rights conferred by Part III of the Constitution or for any other purpose. This power can be exercised by a High Court in relation to the territories within which the cause of action, wholly or in part, arises, even if the seat of the government or authority is outside those territories.",
+    "articles": [
+      {
+        "article_number": "Article 226(1)",
+        "title": "Part VI - The States",
+        "relevance_summary": "every High Court shall have power, throughout the territories in relation to which it exercises jurisdiction, to issue to any person or authority, including in appropriate cases, any Government, within those territories directions, orders or writs, including writs in the nature of habeas corpus, mandamus, prohibition, quo warranto and certiorari, or any of them, for the enforcement of any of the rights conferred by Part III and for any other purpose."
+      },
+      {
+        "article_number": "Article 226(2)",
+        "title": "Part VI - The States",
+        "relevance_summary": "The power conferred by clause (1) to issue directions, orders or writs to any Government, authority or person may also be exercised by any High Court exercising jurisdiction in relation to the territories within which the cause of action, wholly or in part, arises for the exercise of such power"
+      }
+    ]
   },
   {
     "query": "A school refused to admit an 8-year-old child living in a nearby slum, citing lack of birth certificate.",
-    "answer": "The provided Constitutional provisions do not contain sufficient information to answer this query with high confidence. The matter falls outside direct constitutional provisions and requires specific statutory remedies.",
-    "cited_articles": [],
+    "answer": "Under Article 21A of the Constitution of India, the State is mandated to provide free and compulsory education to all children between the ages of six and fourteen. This fundamental right imposes an obligation on the State to ensure access to education, which should not be denied based on administrative hurdles such as the lack of a birth certificate.",
+    "cited_articles": [
+      {
+        "article": "Article 21A",
+        "part": "Part III – Fundamental Rights",
+        "exact_quote": "The State shall provide free and compulsory education to all children of the age of six to fourteen years in such manner as the State may, by law, determine."
+      }
+    ],
     "recommended_case_category": "Civil",
-    "urgency_level": "Low",
-    "suggested_action": "Approach the District Legal Services Authority (DLSA) or file a Writ Petition under Article 226/32 before the High Court."
+    "urgency_level": "Medium",
+    "suggested_action": "Approach the local District Education Officer (DEO) or the nearest District Legal Services Authority (DLSA) to file a formal complaint regarding the denial of the child's fundamental right to education.",
+    "consult_lawyer_immediately": false,
+    "disclaimer": "This information is for educational purposes and does not constitute formal legal advice. Please consult with a qualified advocate or the District Legal Services Authority for specific legal representation.",
+    "explanation": "Under Article 21A of the Constitution of India, the State is mandated to provide free and compulsory education to all children between the ages of six and fourteen. This fundamental right imposes an obligation on the State to ensure access to education, which should not be denied based on administrative hurdles such as the lack of a birth certificate.",
+    "articles": [
+      {
+        "article_number": "Article 21A",
+        "title": "Part III – Fundamental Rights",
+        "relevance_summary": "The State shall provide free and compulsory education to all children of the age of six to fourteen years in such manner as the State may, by law, determine."
+      }
+    ]
   }
 ]

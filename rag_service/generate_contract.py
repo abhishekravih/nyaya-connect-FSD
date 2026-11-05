@@ -24,7 +24,18 @@ def main():
 
     for q in QUERIES:
         resp = ask_constitutional_rag(q)
-        contract_responses.append(resp.model_dump())
+        item = resp.model_dump()
+        # Ensure teammate dual-schema compatibility
+        item["explanation"] = resp.answer
+        item["articles"] = [
+            {
+                "article_number": getattr(c, "article", str(c)),
+                "title": getattr(c, "part", "Legal Provision"),
+                "relevance_summary": getattr(c, "exact_quote", "") or f"Key statutory provision under {getattr(c, 'article', str(c))}"
+            }
+            for c in resp.cited_articles
+        ]
+        contract_responses.append(item)
         print(f" • Processed: {q[:55]}... -> [{resp.recommended_case_category} / {resp.urgency_level}]")
 
     output_path = "rag_responses_contract.json"

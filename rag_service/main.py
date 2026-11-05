@@ -1,17 +1,19 @@
 """
-NyayaConnect - Constitutional RAG Microservice (Person 3: AI & RAG Engine)
+NyayaConnect - Multi-Source Legal RAG Microservice (Person 3: AI & RAG Engine)
 File: /rag_service/main.py
 
 Port: 8001 (default) or $PORT
 Endpoints:
-  - POST /api/v1/rag/ask (Constitutional grounding, zero-hallucination citations, case categorization)
+  - POST /api/v1/rag/ask (Multi-source legal grounding, zero-hallucination citations, case categorization)
   - GET /api/v1/rag/health (Detailed RAG health check)
   - GET /health (Docker health check)
 """
 
 import os
 import time
+import json
 import logging
+from collections import OrderedDict
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,21 +26,24 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 logger = logging.getLogger("nyayaconnect.rag_service")
 
 app = FastAPI(
-    title="NyayaConnect Constitutional RAG Engine",
-    description="Vector search & Constitutional Article grounding powered by ChromaDB & Google Gemini",
-    version="1.0.0"
+    title="NyayaConnect Legal RAG Engine",
+    description="Multi-Source Vector Search & Legal Grounding powered by ChromaDB & Google Gemini (Constitution, CPA, BNSS, BNS, RTI, Precedents)",
+    version="1.1.0"
 )
+
+# Reviewer Requirement 7: Restrict CORS
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000").split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
-# In-memory LRU query cache for sub-millisecond repeated responses
-_QUERY_CACHE: Dict[str, Dict[str, Any]] = {}
+# True OrderedDict LRU query cache (Reviewer Requirement 7)
+_QUERY_CACHE: OrderedDict[str, Dict[str, Any]] = OrderedDict()
 _MAX_CACHE_SIZE = 500
 
 
@@ -50,8 +55,8 @@ class AskRequest(BaseModel):
         json_schema_extra={"example": "The police detained my brother for 36 hours without producing him before a magistrate."}
     )
     language: Optional[str] = Field("en", description="Preferred language code (e.g. 'en', 'hi')")
-    chat_history: Optional[list] = Field(default_factory=list, description="Prior conversation context")
-    top_k: Optional[int] = Field(4, ge=1, le=10, description="Number of constitutional articles to retrieve")
+    chat_history: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Prior conversation context")
+    top_k: Optional[int] = Field(4, ge=1, le=10, description="Number of legal articles to retrieve")
 
 
 class ArticleCitation(BaseModel):
@@ -75,6 +80,9 @@ class ComprehensiveRAGResponse(BaseModel):
     recommended_case_category: str
     urgency_level: str
     suggested_action: str
+    consult_lawyer_immediately: bool = False
+    disclaimer: str = "This platform provides legal literacy and informational guidance, not formal legal advice. Consult a verified advocate for statutory litigation."
+    execution_time_seconds: Optional[float] = 0.0
 
 
 @app.on_event("startup")
@@ -84,7 +92,7 @@ def startup_event():
         col = get_collection()
         count = col.count()
         if count == 0:
-            logger.info("ChromaDB collection is empty. Auto-indexing constitutional corpus...")
+            logger.info("ChromaDB collection is empty. Auto-indexing legal corpus...")
             build_vector_store(force_reindex=False)
             logger.info(f"Auto-indexing complete. {col.count()} chunks available.")
         else:
@@ -97,8 +105,8 @@ def startup_event():
 def root():
     return {
         "status": "online",
-        "service": "NyayaConnect Constitutional RAG Engine",
-        "version": "1.0.0",
+        "service": "NyayaConnect Legal RAG Engine",
+        "version": "1.1.0",
         "endpoints": {
             "ask": "POST /api/v1/rag/ask",
             "health": "GET /api/v1/rag/health",
@@ -127,8 +135,8 @@ def rag_health_check():
 
     return {
         "status": "healthy",
-        "service": "NyayaConnect Constitutional RAG Engine",
-        "version": "1.0.0",
+        "service": "NyayaConnect Legal RAG Engine",
+        "version": "1.1.0",
         "vector_store": {
             "collection": COLLECTION_NAME,
             "total_chunks": total_chunks,
@@ -142,7 +150,8 @@ def rag_health_check():
         },
         "cache": {
             "cached_entries": len(_QUERY_CACHE),
-            "max_capacity": _MAX_CACHE_SIZE
+            "max_capacity": _MAX_CACHE_SIZE,
+            "type": "OrderedDict_LRU"
         }
     }
 
@@ -150,20 +159,24 @@ def rag_health_check():
 @app.post("/api/v1/rag/ask", response_model=ComprehensiveRAGResponse, tags=["RAG"])
 def ask_constitutional_query(req: AskRequest):
     """
-    Core Constitutional RAG pipeline:
+    Core Multi-Source Legal RAG pipeline:
     1. Checks LRU memory cache for instant hit (< 5ms).
-    2. Executes hybrid retrieval against persistent ChromaDB.
+    2. Executes hybrid retrieval (BM25 + Dense RRF) against persistent ChromaDB.
     3. Synthesizes zero-hallucination response validated by Pydantic.
     4. Formats both rich cited_articles (Blueprint) and articles (Orchestrator).
     """
     clean_query = req.query.strip()
-    cache_key = f"{clean_query.lower()}_{req.top_k}"
+    hist_hash = hash(json.dumps(req.chat_history, sort_keys=True)) if req.chat_history else 0
+    cache_key = f"{req.language}_{clean_query.lower()}_{req.top_k}_{hist_hash}"
 
     if cache_key in _QUERY_CACHE:
+        _QUERY_CACHE.move_to_end(cache_key)
         return _QUERY_CACHE[cache_key]
 
     try:
+        start_time = time.time()
         legal_resp: RAGLegalResponse = ask_constitutional_rag(clean_query, top_k=req.top_k)
+        elapsed = round(time.time() - start_time, 3)
 
         # Build dual article schemas for 100% interoperability
         rich_cited: List[RichCitedArticle] = []
@@ -171,7 +184,7 @@ def ask_constitutional_query(req: AskRequest):
 
         for item in legal_resp.cited_articles:
             art_str = getattr(item, "article", str(item))
-            part_str = getattr(item, "part", "Part III – Fundamental Rights")
+            part_str = getattr(item, "part", "Legal Provision")
             quote_str = getattr(item, "exact_quote", "")
 
             rich_cited.append(RichCitedArticle(
@@ -193,13 +206,15 @@ def ask_constitutional_query(req: AskRequest):
             "articles": [s.model_dump() for s in simple_articles],
             "recommended_case_category": legal_resp.recommended_case_category,
             "urgency_level": legal_resp.urgency_level,
-            "suggested_action": legal_resp.suggested_action
+            "suggested_action": legal_resp.suggested_action,
+            "consult_lawyer_immediately": legal_resp.consult_lawyer_immediately,
+            "disclaimer": legal_resp.disclaimer,
+            "execution_time_seconds": elapsed
         }
 
-        # Cache response
+        # Evict least recently used if at capacity
         if len(_QUERY_CACHE) >= _MAX_CACHE_SIZE:
-            oldest = next(iter(_QUERY_CACHE))
-            del _QUERY_CACHE[oldest]
+            _QUERY_CACHE.popitem(last=False)
         _QUERY_CACHE[cache_key] = response_dict
 
         return ComprehensiveRAGResponse(**response_dict)
@@ -208,7 +223,7 @@ def ask_constitutional_query(req: AskRequest):
         logger.error(f"RAG inference error: {exc}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Constitutional RAG pipeline inference failed: {str(exc)}"
+            detail=f"Legal RAG pipeline inference failed: {str(exc)}"
         )
 
 
