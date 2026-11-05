@@ -145,39 +145,98 @@ def get_collection():
     return collection
 
 
+def normalize_prov(s: str) -> str:
+    s = (s or "").lower().strip()
+    s = re.sub(r"\b(2019|2023|2005)\b", "", s)
+    s = re.sub(r"[,\.–—]", "", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def matches_ref(ref: str, provisions: List[str]) -> bool:
+    """
+    Reviewer Requirement 1:
+    Exact-match reference matcher.
+    Article 21 matches 'Article 21', 'Article 21A', and 'Article 21(1)' but NOT 'Article 210' - 'Article 219'.
+    Statute-qualified references (e.g., 'BNSS Section 58') match only BNSS Section 58,
+    preventing collisions with CPA Section 58.
+    """
+    if not provisions:
+        return False
+    r = normalize_prov(ref)
+    r_statutes = [st for st in ["bnss", "bns", "cpa", "rti", "article"] if st in r]
+    for p in provisions:
+        p_clean = normalize_prov(p)
+        p_statutes = [st for st in ["bnss", "bns", "cpa", "rti", "article"] if st in p_clean]
+        if r_statutes and p_statutes and r_statutes != p_statutes:
+            continue
+        if r_statutes and not p_statutes:
+            continue
+        if p_clean == r:
+            return True
+        if re.fullmatch(re.escape(r) + r"[a-z]", p_clean):
+            return True
+        if re.fullmatch(re.escape(r) + r"\s*\([0-9a-z]+\)", p_clean):
+            return True
+        if re.fullmatch(re.escape(p_clean) + r"[a-z]?", r):
+            return True
+        if re.fullmatch(re.escape(p_clean) + r"\s*\([0-9a-z]+\)", r):
+            return True
+    return False
+
+
 def extract_exact_legal_references(query: str) -> List[str]:
     """
     Extracts explicit article, section, or landmark precedent mentions:
-    e.g. 'Article 21', 'Section 35', 'Preamble', 'Maneka Gandhi', 'D.K. Basu', 'Puttaswamy', 'Arnesh Kumar', 'Lalita Kumari'.
+    e.g. 'Article 21', 'BNSS Section 58', 'CPA Section 35', 'Preamble', 'Maneka Gandhi', 'D.K. Basu'.
     """
     refs = []
-    # Constitutional Articles e.g. Article 21, Art 19(1)(a)
-    art_matches = re.findall(r"(?:article|art\.?)\s*(\d+[A-Z]?)", query, re.IGNORECASE)
-    for art in art_matches:
-        refs.append(f"Article {art.upper()}")
+    q = query.strip()
 
-    # Statutory Sections e.g. Section 35, Sec 173
-    sec_matches = re.findall(r"(?:section|sec\.?)\s*(\d+)", query, re.IGNORECASE)
-    for sec in sec_matches:
-        refs.append(f"Section {sec}")
+    # 1. Statute-qualified sections: e.g. "BNSS Section 58", "Section 35 of CPA", "BNS Section 103"
+    statute_patterns = [
+        (r"\b(?:bnss|bharatiya nagarik suraksha sanhita)\s*(?:section|sec\.?)?\s*(\d+)", "BNSS Section {}"),
+        (r"\b(?:bns|bharatiya nyaya sanhita)\s*(?:section|sec\.?)?\s*(\d+)", "BNS Section {}"),
+        (r"\b(?:cpa|consumer protection act)\s*(?:section|sec\.?)?\s*(\d+)", "CPA Section {}"),
+        (r"\b(?:rti|right to information)\s*(?:section|sec\.?)?\s*(\d+)", "RTI Section {}"),
+        (r"\b(?:section|sec\.?)\s*(\d+)\s*(?:of\s+the\s+)?(?:bnss|bharatiya nagarik suraksha sanhita)", "BNSS Section {}"),
+        (r"\b(?:section|sec\.?)\s*(\d+)\s*(?:of\s+the\s+)?(?:bns|bharatiya nyaya sanhita)", "BNS Section {}"),
+        (r"\b(?:section|sec\.?)\s*(\d+)\s*(?:of\s+the\s+)?(?:cpa|consumer protection act)", "CPA Section {}"),
+        (r"\b(?:section|sec\.?)\s*(\d+)\s*(?:of\s+the\s+)?(?:rti|right to information)", "RTI Section {}"),
+    ]
+    for pattern, template in statute_patterns:
+        for m in re.finditer(pattern, q, re.I):
+            refs.append(template.format(m.group(1)))
 
-    if re.search(r"\bpreamble\b", query, re.IGNORECASE):
+    # 2. Constitutional Articles e.g. Article 21, Art 19(1)(a)
+    art_matches = re.finditer(r"\b(?:article|art\.?)\s*(\d+[A-Z]?)", q, re.I)
+    for m in art_matches:
+        refs.append(f"Article {m.group(1).upper()}")
+
+    # 3. Bare Statutory Sections (if not already statute qualified)
+    if not any("Section" in r for r in refs):
+        sec_matches = re.finditer(r"\b(?:section|sec\.?)\s*(\d+[A-Z]?)", q, re.I)
+        for m in sec_matches:
+            refs.append(f"Section {m.group(1)}")
+
+    if re.search(r"\bpreamble\b", q, re.IGNORECASE):
         refs.append("Preamble")
 
-    if re.search(r"\bmaneka\s+gandhi\b", query, re.IGNORECASE):
-        refs.append("Maneka Gandhi")
-    if re.search(r"\bd\.?k\.?\s*basu\b", query, re.IGNORECASE):
-        refs.append("D.K. Basu")
-    if re.search(r"\bputtaswamy\b", query, re.IGNORECASE):
-        refs.append("Puttaswamy")
-    if re.search(r"\barnesh\s+kumar\b", query, re.IGNORECASE):
-        refs.append("Arnesh Kumar")
-    if re.search(r"\blalita\s+kumari\b", query, re.IGNORECASE):
-        refs.append("Lalita Kumari")
-    if re.search(r"\bshreya\s+singhal\b", query, re.IGNORECASE):
-        refs.append("Shreya Singhal")
+    # 4. Landmark Precedents
+    precedents = [
+        (r"\bmaneka\s+gandhi\b", "Maneka Gandhi"),
+        (r"\bd\.?k\.?\s*basu\b", "D.K. Basu"),
+        (r"\bputtaswamy\b", "Puttaswamy"),
+        (r"\barnesh\s+kumar\b", "Arnesh Kumar"),
+        (r"\blalita\s+kumari\b", "Lalita Kumari"),
+        (r"\bshreya\s+singhal\b", "Shreya Singhal"),
+        (r"\bnavtej\s+(?:singh\s+)?johar\b", "Navtej Johar"),
+        (r"\bvishaka\b", "Vishaka"),
+    ]
+    for pattern, name in precedents:
+        if re.search(pattern, q, re.I):
+            refs.append(name)
 
-    return refs
+    return list(dict.fromkeys(refs))
 
 
 def hybrid_retrieve(query: str, top_k: int = 4) -> List[Dict[str, Any]]:
@@ -236,14 +295,14 @@ def hybrid_retrieve(query: str, top_k: int = 4) -> List[Dict[str, Any]]:
         else:
             retrieval_reasons[doc_id] = "bm25_keyword"
 
-    # Exact reference boost: Ranked first
+    # Exact reference boost: Ranked first ONLY for verified exact matches (Reviewer Item 1)
     for doc_id, chunk in chunk_id_map.items():
-        art_num = chunk.get("article_number", "")
-        title = chunk.get("title", "")
+        chunk_provisions = chunk.get("provisions") or [chunk.get("article_number", "")]
         for ref in exact_refs:
-            if ref.lower() in art_num.lower() or ref.lower() in title.lower():
+            if matches_ref(ref, chunk_provisions):
                 rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0
                 retrieval_reasons[doc_id] = "exact_reference"
+                break
 
     # Candidate pool for reranker: Top 20 from RRF
     sorted_candidate_ids = sorted(rrf_scores.keys(), key=lambda did: rrf_scores[did], reverse=True)[:20]
@@ -260,6 +319,10 @@ def hybrid_retrieve(query: str, top_k: int = 4) -> List[Dict[str, Any]]:
             "source": chunk.get("source", "Constitution of India"),
             "source_type": chunk.get("source_type", "Constitution")
         }
+        # Retain structured provisions in doc metadata for strict verifier
+        if "provisions" in chunk:
+            meta["provisions"] = chunk["provisions"]
+
         doc_text = dense_id_to_doc.get(doc_id) or chunk.get("text", "")
         dist = dense_id_to_dist.get(doc_id, 0.3)
         sim_score = max(0.0, round(1.0 - dist, 4)) if dist <= 1.0 else 0.5
@@ -278,7 +341,8 @@ def hybrid_retrieve(query: str, top_k: int = 4) -> List[Dict[str, Any]]:
     # --- 4. Cross-Encoder Reranking ---
     reranker = get_reranker()
     if reranker and candidate_docs:
-        pairs = [(query, cd["text"]) for cd in candidate_docs]
+        # Bounded to 1800 characters to prevent tail truncation by 512-token context window
+        pairs = [(query, cd["text"][:1800]) for cd in candidate_docs]
         try:
             ce_scores = reranker.predict(pairs)
             for i, score in enumerate(ce_scores):

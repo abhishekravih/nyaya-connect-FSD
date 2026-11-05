@@ -115,3 +115,16 @@ def test_expanded_corpus_sources(corpus):
 
     precedent_chunks = [c for c in corpus if c.get("source_type") == "Landmark Judgment"]
     assert len(precedent_chunks) >= 5, "Must contain landmark judgments (Maneka Gandhi, D.K. Basu, Puttaswamy, etc.)"
+
+
+def test_statutory_registry_section_counts():
+    """
+    Reviewer Requirement 4:
+    Assert section counts: 531 for BNSS, 358 for BNS, 107 for CPA and 31 for RTI.
+    """
+    from ingest_statutes import OFFICIAL_STATUTE_REGISTRY
+
+    assert OFFICIAL_STATUTE_REGISTRY["BNSS 2023"]["total_sections"] == 531
+    assert OFFICIAL_STATUTE_REGISTRY["BNS 2023"]["total_sections"] == 358
+    assert OFFICIAL_STATUTE_REGISTRY["CPA 2019"]["total_sections"] == 107
+    assert OFFICIAL_STATUTE_REGISTRY["RTI 2005"]["total_sections"] == 31

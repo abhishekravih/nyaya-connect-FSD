@@ -8,11 +8,11 @@ Covers Constitution of India, CPA 2019, BNSS 2023, BNS 2023, RTI Act 2005, and L
 import os
 import re
 import json
-from typing import List, Literal, Dict, Any, Optional
+from typing import List, Literal, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-from vector_store import hybrid_retrieve
+from vector_store import hybrid_retrieve, matches_ref
 
 load_dotenv()
 
@@ -22,7 +22,7 @@ TEMPERATURE = float(os.getenv("TEMPERATURE", "0.1"))
 
 
 class CitedArticle(BaseModel):
-    article: str = Field(description="Article, Section, or Case citation e.g. 'Article 22(1)', 'BNSS 2023 Section 37', 'CPA 2019 Section 35', 'D.K. Basu v. State of West Bengal'")
+    article: str = Field(description="Article, Section, or Case citation e.g. 'Article 22(1)', 'BNSS 2023 Section 38', 'CPA 2019 Section 35', 'D.K. Basu v. State of West Bengal'")
     part: Optional[str] = Field(default="", description="Part title or Chapter e.g. 'Part III – Fundamental Rights', 'Chapter V'")
     exact_quote: Optional[str] = Field(default="", description="Exact quote from the retrieved legal text")
 
@@ -47,6 +47,10 @@ class RAGLegalResponse(BaseModel):
         default=False,
         description="High urgency flag indicating emergency legal intervention is required"
     )
+    dropped_citations_count: int = Field(
+        default=0,
+        description="Count of ungrounded citations dropped by the strict zero-hallucination code verifier"
+    )
     disclaimer: str = Field(
         default="This platform provides legal literacy and informational guidance, not formal legal advice. Consult a verified advocate for statutory litigation.",
         description="Mandatory statutory legal disclaimer"
@@ -58,71 +62,75 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
 
 
-def verify_grounded_response(resp: RAGLegalResponse, docs: List[Dict[str, Any]]) -> RAGLegalResponse:
+def canonical_provision(p: str) -> str:
+    s = (p or "").lower().strip()
+    s = re.sub(r"\b(2019|2023|2005)\b", "", s)
+    s = re.sub(r"[,\.–—\(\)]", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+REFUSAL_TEXT = (
+    "The retrieved Indian legal provisions do not contain sufficient verified textual grounding "
+    "to answer this query with absolute certainty. Please consult a qualified advocate on NyayaConnect."
+)
+
+
+def verify_grounded_response(resp: RAGLegalResponse, docs: List[Dict[str, Any]]) -> Tuple[RAGLegalResponse, int]:
     """
-    Enforces 'Zero Hallucination' at the code level (Reviewer Requirement 2).
-    Drops any cited article, section, or precedent that was not in retrieved docs
-    or whose exact_quote is not in the context.
-    If the citation article matches a retrieved document but the quote was truncated or slightly paraphrased,
-    re-anchors the exact quote directly from the retrieved document text.
+    Reviewer Requirement 2: Strict Zero-Hallucination Verifier.
+    A citation survives only if its provision was retrieved and its full quote appears in that chunk.
+    Otherwise drop it, and NEVER overwrite or fabricate a quote.
+    Returns (resp, dropped_count).
     """
     if not resp.cited_articles or not docs:
-        return resp
+        resp.dropped_citations_count = 0
+        return resp, 0
 
-    doc_art_map = {}
+    by_key: Dict[str, str] = {}
+    doc_provisions_map: List[Tuple[List[str], str]] = []
+
     for d in docs:
-        art_key = normalize_text(d["metadata"].get("article_number", ""))
-        doc_art_map[art_key] = d["text"]
+        text_norm = normalize_text(d.get("text", ""))
+        provs = d.get("metadata", {}).get("provisions") or [d.get("metadata", {}).get("article_number", "")]
+        doc_provisions_map.append((provs, text_norm))
+        for p in provs:
+            by_key[canonical_provision(p)] = text_norm
+            m = re.search(r"\b(article\s*\d+[a-z]?|section\s*\d+[a-z]?)\b", p.lower())
+            if m:
+                by_key[canonical_provision(m.group(0))] = text_norm
 
-    all_ctx_text = normalize_text(" ".join([d.get("text", "") for d in docs]))
-    verified_citations: List[CitedArticle] = []
+    kept: List[CitedArticle] = []
+    dropped: int = 0
 
     for c in resp.cited_articles:
         c_art = getattr(c, "article", str(c))
-        norm_c_art = normalize_text(c_art)
         c_quote = getattr(c, "exact_quote", "") or ""
         norm_q = normalize_text(c_quote)
 
-        # 1. Verify article was retrieved
-        matched_doc_art = None
-        for doc_art, doc_text in doc_art_map.items():
-            if doc_art and (doc_art in norm_c_art or norm_c_art in doc_art):
-                matched_doc_art = (doc_art, doc_text)
-                break
-
-        if not matched_doc_art:
-            c_nums = set(re.findall(r"\d+[A-Z]?", norm_c_art))
-            for doc_art, doc_text in doc_art_map.items():
-                doc_nums = set(re.findall(r"\d+[A-Z]?", doc_art))
-                if c_nums and c_nums.intersection(doc_nums):
-                    for kw in ["article", "section", "cpa", "bnss", "bns", "rti", "schedule", "basu", "maneka", "puttaswamy"]:
-                        if kw in norm_c_art and kw in doc_art:
-                            matched_doc_art = (doc_art, doc_text)
-                            break
-                if matched_doc_art:
+        matched_text = by_key.get(canonical_provision(c_art))
+        if not matched_text:
+            for provs, text_norm in doc_provisions_map:
+                if matches_ref(c_art, provs):
+                    matched_text = text_norm
                     break
 
-        if not matched_doc_art:
-            print(f"⚠️ Code Guardrail: Dropped ungrounded citation '{c_art}' (not in retrieved docs)")
-            continue
-
-        # 2. Verify quote is verbatim in context
-        doc_art, doc_text = matched_doc_art
-        if norm_q and len(norm_q) > 10 and (norm_q in all_ctx_text or norm_q[:40] in all_ctx_text):
-            verified_citations.append(c)
+        if matched_text and len(norm_q) > 10 and norm_q in matched_text:
+            kept.append(c)
         else:
-            c.exact_quote = doc_text[:120].strip()
-            verified_citations.append(c)
+            dropped += 1
+            print(f"⚠️ Code Guardrail: Dropped ungrounded citation '{c_art}' (quote not found in retrieved text)")
 
-    resp.cited_articles = verified_citations
+    resp.cited_articles = kept
+    resp.dropped_citations_count = dropped
 
-    # If all citations dropped, return honest lack of grounding response
-    if not verified_citations and resp.recommended_case_category not in ["Consumer", "Criminal", "Civil"]:
-        resp.answer = "The retrieved Indian legal provisions do not contain sufficient verified textual grounding to answer this query with absolute certainty. Please consult a qualified advocate on NyayaConnect."
+    # If all citations dropped, return honest lack of grounding response (Reviewer Item 2)
+    if dropped > 0 and not kept:
+        resp.answer = REFUSAL_TEXT
         resp.urgency_level = "Low"
-        resp.suggested_action = "Consult a verified advocate or approach the District Legal Services Authority (DLSA) for legal assistance."
+        resp.suggested_action = "Consult a verified advocate on NyayaConnect or approach the District Legal Services Authority (DLSA)."
+        resp.consult_lawyer_immediately = False
 
-    return resp
+    return resp, dropped
 
 
 def condense_query(query: str, chat_history: Optional[List[Dict[str, Any]]] = None) -> str:
@@ -236,7 +244,7 @@ def classify_legal_domain(query: str):
         return "Civil", "Medium", "File a Writ Petition under Article 226/32 challenging unauthorized surveillance and violation of privacy under Article 21 and Puttaswamy precedent."
     
     if any(re.search(pat, q) for pat in CRIMINAL_WORD_PATTERNS):
-        return "Criminal", "High", "Seek immediate legal counsel to file a Bail application under BNSS 482 or petition for a Writ of Habeas Corpus under Article 226/32."
+        return "Criminal", "High", "Seek immediate legal counsel to file a Regular Bail application under BNSS Section 480/483 (or Anticipatory Bail under Section 482 if apprehending arrest) or petition for a Writ of Habeas Corpus under Article 226/32."
         
     if any(re.search(pat, q) for pat in CONSUMER_WORD_PATTERNS):
         return "Consumer", "Medium", "File a consumer complaint on the National Consumer Helpline (NCH) or approach the District Consumer Disputes Redressal Commission under CPA Section 35."
@@ -269,13 +277,13 @@ def _generate_offline_fallback_response(query: str, retrieved_docs: List[Dict[st
     cited_articles = []
     for d in retrieved_docs[:3]:
         art_num = d["metadata"].get("article_number", "")
-        title = d["metadata"].get("title", "")
         part = d["metadata"].get("part", "")
         body = d.get("text", "")
-        quote = body.split("\n\n")[-1][:250].strip().replace("\n", " ")
+        lines = [line.strip() for line in body.split("\n") if len(line.strip()) > 25 and not line.startswith("Part:")]
+        quote = lines[0] if lines else body[:180].strip()
         if art_num:
             cited_articles.append(CitedArticle(
-                article=f"{art_num} ({title})" if title else art_num,
+                article=art_num,
                 part=part,
                 exact_quote=quote
             ))
@@ -372,7 +380,8 @@ def ask_constitutional_rag(query: str, chat_history: Optional[List[Dict[str, Any
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
         fallback_resp = _generate_offline_fallback_response(query, retrieved_docs)
-        return verify_grounded_response(fallback_resp, retrieved_docs)
+        resp, _ = verify_grounded_response(fallback_resp, retrieved_docs)
+        return resp
 
     history_block = ""
     if chat_history:
@@ -417,7 +426,7 @@ Respond strictly in structured JSON according to the configured response schema.
                 raw_json = response.text.strip()
                 data = json.loads(raw_json)
                 resp = RAGLegalResponse(**data)
-                resp = verify_grounded_response(resp, retrieved_docs)
+                resp, _ = verify_grounded_response(resp, retrieved_docs)
                 if resp.urgency_level == "High":
                     resp.consult_lawyer_immediately = True
                 return resp
@@ -427,12 +436,14 @@ Respond strictly in structured JSON according to the configured response schema.
         # If all candidates threw exceptions, fallback
         print("All Gemini models exhausted. Utilizing grounded fallback.")
         fallback_resp = _generate_offline_fallback_response(query, retrieved_docs)
-        return verify_grounded_response(fallback_resp, retrieved_docs)
+        resp, _ = verify_grounded_response(fallback_resp, retrieved_docs)
+        return resp
 
     except Exception as err:
         print(f"⚠️ Gemini API invocation failed ({err}). Utilizing grounded fallback.")
         fallback_resp = _generate_offline_fallback_response(query, retrieved_docs)
-        return verify_grounded_response(fallback_resp, retrieved_docs)
+        resp, _ = verify_grounded_response(fallback_resp, retrieved_docs)
+        return resp
 
 
 if __name__ == "__main__":

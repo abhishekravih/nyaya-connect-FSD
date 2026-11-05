@@ -77,6 +77,7 @@ def extract_preamble(doc: fitz.Document) -> Dict[str, Any]:
         "title": "Preamble to the Constitution of India",
         "part": "Preamble",
         "clause": "Full",
+        "provisions": ["Preamble"],
         "text": f"PREAMBLE TO THE CONSTITUTION OF INDIA\n\n{cleaned_preamble}",
         "source": "Constitution of India (Official Gazetted Edition)",
         "source_type": "Constitution",
@@ -108,6 +109,7 @@ def chunk_article(article_num: str, title: str, part: str, full_body: str, page_
             "title": clean_title,
             "part": part,
             "clause": "Full",
+            "provisions": [f"Article {article_num}"],
             "text": text_content,
             "source": "Constitution of India",
             "source_type": "Constitution",
@@ -128,12 +130,17 @@ def chunk_article(article_num: str, title: str, part: str, full_body: str, page_
                 f"Clause {clause_id}: {clause_text}"
             )
             clause_num_clean = clause_id.strip("()")
+            provs = [f"Article {article_num}"]
+            if clause_id and clause_id != "Full":
+                provs.append(f"Article {article_num}{clause_id}")
+                provs.append(f"Article {article_num} Clause {clause_id}")
             raw_chunks.append({
                 "id": f"art_{article_num.lower()}_{art_idx}_c{clause_num_clean}_{i+1}",
                 "article_number": f"Article {article_num}",
                 "title": f"{clean_title} - Clause {clause_id}",
                 "part": part,
                 "clause": clause_id,
+                "provisions": provs,
                 "text": chunk_text,
                 "source": "Constitution of India",
                 "source_type": "Constitution",
@@ -149,21 +156,25 @@ def chunk_article(article_num: str, title: str, part: str, full_body: str, page_
             merged_chunks[-1]["char_count"] = len(merged_chunks[-1]["text"])
             if c["clause"] != "Full" and c["clause"] not in merged_chunks[-1]["clause"]:
                 merged_chunks[-1]["clause"] += f", {c['clause']}"
+            if "provisions" in c:
+                for p in c["provisions"]:
+                    if p not in merged_chunks[-1]["provisions"]:
+                        merged_chunks[-1]["provisions"].append(p)
         else:
             merged_chunks.append(c)
 
-    # Requirement 4: Split chunks > 2800 characters into coherent sub-chunks
+    # Reviewer Item 1: Split chunks > 1800 characters to prevent tail truncation by 512-token cross-encoder
     final_chunks: List[Dict[str, Any]] = []
     for c in merged_chunks:
-        if len(c["text"]) > 2800:
+        if len(c["text"]) > 1800:
             body = c["text"]
             parts = []
-            while len(body) > 2400:
-                split_at = body.rfind("\n\n", 200, 2200)
+            while len(body) > 1600:
+                split_at = body.rfind("\n\n", 200, 1600)
                 if split_at == -1:
-                    split_at = body.rfind(". ", 200, 2200)
+                    split_at = body.rfind(". ", 200, 1600)
                 if split_at == -1:
-                    split_at = 2000
+                    split_at = 1400
                 else:
                     split_at += 1
                 part_txt = body[:split_at].strip()
@@ -179,13 +190,20 @@ def chunk_article(article_num: str, title: str, part: str, full_body: str, page_
                     parts[-1] += "\n\n" + body
                 else:
                     parts.append(body)
-
-            for sub_i, p_txt in enumerate(parts):
-                sc = dict(c)
-                sc["id"] = f"{c['id']}_pt{sub_i+1}"
-                sc["text"] = p_txt
-                sc["char_count"] = len(p_txt)
-                final_chunks.append(sc)
+            for idx, p in enumerate(parts):
+                final_chunks.append({
+                    "id": f"{c['id']}_part{idx+1}",
+                    "article_number": c["article_number"],
+                    "title": f"{c['title']} (Part {idx+1})",
+                    "part": c["part"],
+                    "clause": c["clause"],
+                    "provisions": c.get("provisions", [c["article_number"]]),
+                    "text": p,
+                    "source": c["source"],
+                    "source_type": c["source_type"],
+                    "page_number": c["page_number"],
+                    "char_count": len(p)
+                })
         else:
             final_chunks.append(c)
 
@@ -313,16 +331,19 @@ def extract_articles_and_schedules(doc: fitz.Document) -> List[Dict[str, Any]]:
         s_body = sched_text[s_start:s_end].strip()
         real_page = get_sched_page_for_idx(sm.start())
         
-        if len(s_body) > 2000:
-            sub_chunks = [s_body[j:j+1800] for j in range(0, len(s_body), 1500)]
+        if len(s_body) > 1800:
+            sub_chunks = [s_body[j:j+1600] for j in range(0, len(s_body), 1400)]
+            if len(sub_chunks) > 1 and len(sub_chunks[-1]) < 150:
+                sub_chunks[-2] += "\n\n" + sub_chunks.pop()
             for sub_idx, sc in enumerate(sub_chunks):
-                sub_page = get_sched_page_for_idx(s_start + (sub_idx * 1500))
+                sub_page = get_sched_page_for_idx(s_start + (sub_idx * 1400))
                 all_chunks.append({
                     "id": f"sched_{sched_name.lower().replace(' ', '_')}_part_{sub_idx+1}",
                     "article_number": sched_name,
                     "title": f"{sched_name} (Part {sub_idx+1})",
                     "part": "Schedules",
                     "clause": f"Section {sub_idx+1}",
+                    "provisions": [sched_name],
                     "text": f"{sched_name} - Part {sub_idx+1}\n\n{sc.strip()}",
                     "source": "Constitution of India",
                     "source_type": "Constitution",
@@ -336,6 +357,7 @@ def extract_articles_and_schedules(doc: fitz.Document) -> List[Dict[str, Any]]:
                 "title": sched_name,
                 "part": "Schedules",
                 "clause": "Full",
+                "provisions": [sched_name],
                 "text": f"{sched_name}\n\n{s_body}",
                 "source": "Constitution of India",
                 "source_type": "Constitution",
@@ -350,7 +372,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
     """
     Comprehensive Multi-Source Legal Corpus (Reviewer 10/10 Architecture):
     - Consumer Protection Act, 2019 (CPA) - Complete Definitions, CCPA, Commissions, Appeals, Product Liability
-    - Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Arrest, Interrogation, Forensic Mandate, Bail, Zero FIR
+    - Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Arrest, Interrogation (Sec 38), Forensic Mandate, Bail (Sec 479, 480, 482, 483), Zero FIR
     - Bharatiya Nyaya Sanhita, 2023 (BNS) - Offences against Body, Women, Property, Negligence, Sovereignty
     - Right to Information Act, 2005 (RTI) - Disclosure, 48-hr Liberty Mandate, Exemptions, Appeals, Penalties
     - Landmark Supreme Court Precedents - Maneka Gandhi, D.K. Basu, Puttaswamy, Navtej Johar, Vishaka, Arnesh Kumar, Lalita Kumari, Shreya Singhal
@@ -365,6 +387,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Definitions: Consumer, Defect, Deficiency, and Unfair Trade Practice",
             "part": "Chapter I - Preliminary",
             "clause": "Section 2(7), 2(10), 2(11), 2(47)",
+            "provisions": ["CPA 2019 Section 2", "CPA Section 2", "Section 2"],
             "text": (
                 "Consumer Protection Act, 2019 - Section 2:\n"
                 "(7) 'consumer' means any person who buys any goods or hires or avails of any services for a consideration "
@@ -380,6 +403,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Consumer Protection Act, 2019",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/15256",
+            "retrieved_on": "2026-11-05",
             "page_number": 1,
             "char_count": 890
         },
@@ -389,6 +415,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Central Consumer Protection Authority (CCPA): False Advertisements and Product Recall",
             "part": "Chapter III - Central Consumer Protection Authority",
             "clause": "Section 10, 18, 21",
+            "provisions": ["CPA 2019 Section 10", "CPA 2019 Section 18", "CPA 2019 Section 21", "CPA Section 10", "CPA Section 18", "CPA Section 21"],
             "text": (
                 "Consumer Protection Act, 2019 - Chapter III (CCPA Regulatory Enforcement):\n"
                 "Section 10 establishes the Central Consumer Protection Authority (CCPA) to regulate matters relating to violation "
@@ -400,6 +427,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Consumer Protection Act, 2019",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/15256",
+            "retrieved_on": "2026-11-05",
             "page_number": 8,
             "char_count": 840
         },
@@ -409,18 +439,23 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Jurisdiction and Procedure for Filing Complaint before District Consumer Commission (e-Daakhil)",
             "part": "Chapter IV - Consumer Disputes Redressal Commission",
             "clause": "Section 34 & 35",
+            "provisions": ["CPA 2019 Section 34", "CPA 2019 Section 35", "CPA Section 34", "CPA Section 35"],
             "text": (
                 "Consumer Protection Act, 2019 - Sections 34 & 35:\n"
-                "Section 34: The District Consumer Disputes Redressal Commission (District Commission) shall have jurisdiction "
-                "to entertain complaints where the value of the goods or services paid as consideration does not exceed fifty lakh rupees "
-                "(up to one crore rupees under gazetted pecuniary limits). A complaint may be filed in the District Commission within the "
-                "local limits of whose jurisdiction the complainant resides or personally works for gain, or where the opposite party works.\n"
-                "Section 35: A complaint, in relation to any goods sold or delivered or agreed to be sold or delivered or any service provided "
-                "or agreed to be provided, may be filed with a District Commission by the consumer, any recognized consumer association, or "
+                "Section 34 (Pecuniary Jurisdiction): Under the Consumer Protection (Jurisdiction of the District Commission, "
+                "the State Commission and the National Commission) Rules, 2021, the District Commission has jurisdiction to entertain "
+                "complaints where the value of goods or services paid as consideration does not exceed fifty lakh rupees (₹50,00,000). "
+                "[Note: Section 34(1) of the parent 2019 Act originally specified up to ₹1 Crore, but was amended downwards by the 2021 Rules]. "
+                "A complaint may be filed in the District Commission within the local limits of whose jurisdiction the complainant resides "
+                "or personally works for gain, or where the opposite party works or carries on business.\n"
+                "Section 35: A complaint may be filed with a District Commission by the consumer, any recognized consumer association, or "
                 "electronically via the e-Daakhil portal or National Consumer Helpline (NCH)."
             ),
             "source": "Consumer Protection Act, 2019",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/15256",
+            "retrieved_on": "2026-11-05",
             "page_number": 18,
             "char_count": 860
         },
@@ -430,6 +465,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Admissibility of Consumer Complaint within 21 Days and Laboratory Testing Procedure",
             "part": "Chapter IV - Consumer Disputes Redressal Commission",
             "clause": "Section 36 & 38",
+            "provisions": ["CPA 2019 Section 36", "CPA 2019 Section 38", "CPA Section 36", "CPA Section 38"],
             "text": (
                 "Consumer Protection Act, 2019 - Sections 36 & 38:\n"
                 "Section 36: On receipt of a complaint, the District Commission shall decide the admissibility of the complaint within "
@@ -441,6 +477,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Consumer Protection Act, 2019",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/15256",
+            "retrieved_on": "2026-11-05",
             "page_number": 20,
             "char_count": 810
         },
@@ -450,6 +489,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Findings and Orders of the District Commission: Replacement, Refund, and Compensation",
             "part": "Chapter IV - Consumer Disputes Redressal Commission",
             "clause": "Section 39",
+            "provisions": ["CPA 2019 Section 39", "CPA Section 39"],
             "text": (
                 "Consumer Protection Act, 2019 - Section 39:\n"
                 "If the District Commission is satisfied that the goods complained against suffer from any defect or that any of the "
@@ -464,6 +504,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Consumer Protection Act, 2019",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/15256",
+            "retrieved_on": "2026-11-05",
             "page_number": 22,
             "char_count": 820
         },
@@ -473,17 +516,21 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Appellate Hierarchy: State Commission, National Commission (NCDRC), and Supreme Court",
             "part": "Chapter IV - Consumer Disputes Redressal Commission",
             "clause": "Section 41, 47, 58",
+            "provisions": ["CPA 2019 Section 41", "CPA 2019 Section 47", "CPA 2019 Section 58", "CPA Section 41", "CPA Section 47", "CPA Section 58"],
             "text": (
                 "Consumer Protection Act, 2019 - Sections 41, 47 & 58 (Appeals & Higher Commissions):\n"
                 "Section 41: Any person aggrieved by an order of the District Commission may prefer an appeal to the State Commission "
                 "within forty-five days from the date of the order, provided 50% of the awarded amount is deposited.\n"
-                "Section 47: State Commission has original jurisdiction for claims exceeding ₹50 Lakh up to ₹2 Crore (or ₹10 Crore under revised rules), "
+                "Section 47: State Commission has original jurisdiction for claims exceeding ₹50 Lakh up to ₹2 Crore (under 2021 Rules), "
                 "and appellate jurisdiction over all District Commissions in the State.\n"
-                "Section 58: National Consumer Disputes Redressal Commission (NCDRC) has jurisdiction for claims exceeding ₹2 Crore / ₹10 Crore, "
+                "Section 58: National Consumer Disputes Redressal Commission (NCDRC) has jurisdiction for claims exceeding ₹2 Crore, "
                 "and appellate jurisdiction over State Commissions. An appeal against NCDRC lies directly before the Supreme Court under Section 67 within thirty days."
             ),
             "source": "Consumer Protection Act, 2019",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/15256",
+            "retrieved_on": "2026-11-05",
             "page_number": 26,
             "char_count": 920
         },
@@ -493,6 +540,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Product Liability Actions against Manufacturers, Service Providers, and Sellers",
             "part": "Chapter VI - Product Liability",
             "clause": "Section 82 to 87",
+            "provisions": ["CPA 2019 Section 82", "CPA 2019 Section 83", "CPA 2019 Section 84", "CPA 2019 Section 85", "CPA 2019 Section 86", "CPA 2019 Section 87", "CPA Section 82"],
             "text": (
                 "Consumer Protection Act, 2019 - Chapter VI (Product Liability):\n"
                 "A product liability action may be brought by a complainant against a product manufacturer or a product service provider "
@@ -504,6 +552,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Consumer Protection Act, 2019",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/15256",
+            "retrieved_on": "2026-11-05",
             "page_number": 34,
             "char_count": 720
         },
@@ -517,6 +568,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "When Police May Arrest Without Warrant & Safeguards (Replacing CrPC 41)",
             "part": "Chapter V - Arrest of Persons",
             "clause": "Section 35",
+            "provisions": ["BNSS 2023 Section 35", "BNSS Section 35", "Section 35"],
             "text": (
                 "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Section 35 (replacing CrPC Section 41):\n"
                 "(1) Any police officer may without an order from a Magistrate and without a warrant, arrest any person who commits, in the "
@@ -529,18 +581,22 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20120",
+            "retrieved_on": "2026-11-05",
             "page_number": 15,
             "char_count": 860
         },
         {
-            "id": "bnss_sec_37_58_rights",
-            "article_number": "BNSS 2023 Section 37 & 58",
-            "title": "Right of Arrested Person to Consult Advocate and Mandatory 24-Hour Magistrate Production",
+            "id": "bnss_sec_38_58_rights",
+            "article_number": "BNSS 2023 Section 38 & 58",
+            "title": "Right of Arrested Person to Consult Advocate during Interrogation and Mandatory 24-Hour Magistrate Production",
             "part": "Chapter V - Arrest of Persons",
-            "clause": "Section 37 & Section 58",
+            "clause": "Section 38 & Section 58",
+            "provisions": ["BNSS 2023 Section 38", "BNSS 2023 Section 58", "BNSS Section 38", "BNSS Section 58"],
             "text": (
-                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Sections 37 & 58:\n"
-                "Section 37 (replacing CrPC Section 41D): When any person is arrested and interrogated by the police, he shall be entitled "
+                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Sections 38 & 58:\n"
+                "Section 38 (replacing CrPC Section 41D): When any person is arrested and interrogated by the police, he shall be entitled "
                 "to meet an advocate of his choice during interrogation, though not throughout interrogation.\n"
                 "Section 58 (replacing CrPC Section 57): No police officer shall detain in custody a person arrested without warrant for a "
                 "longer period than under all the circumstances of the case is reasonable, and such period shall not, in the absence of a "
@@ -550,18 +606,22 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20120",
+            "retrieved_on": "2026-11-05",
             "page_number": 21,
             "char_count": 910
         },
         {
-            "id": "bnss_sec_38_40_safeguards",
-            "article_number": "BNSS 2023 Section 38 & 40",
+            "id": "bnss_sec_37_40_safeguards",
+            "article_number": "BNSS 2023 Section 37 & 40",
             "title": "Designated Police Officer in Every District and Public Display of Arrested Persons",
             "part": "Chapter V - Arrest of Persons",
-            "clause": "Section 38 & Section 40",
+            "clause": "Section 37 & Section 40",
+            "provisions": ["BNSS 2023 Section 37", "BNSS 2023 Section 40", "BNSS Section 37", "BNSS Section 40"],
             "text": (
-                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Sections 38 & 40 (Custodial Transparency Safeguards):\n"
-                "Section 38: The State Government shall establish a police control room in every district and at the state level. "
+                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Sections 37 & 40 (Custodial Transparency Safeguards):\n"
+                "Section 37: The State Government shall establish a police control room in every district and at the state level. "
                 "In every district and in every police station, a designated police officer not below the rank of Assistant Sub-Inspector "
                 "shall be responsible for maintaining information regarding all arrested persons, the offences charged, and the name "
                 "and designation of the arresting police officer.\n"
@@ -570,6 +630,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20120",
+            "retrieved_on": "2026-11-05",
             "page_number": 17,
             "char_count": 830
         },
@@ -579,6 +642,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Search of Arrested Person, Female Search by Female Officer, and Mandatory Medical Examination",
             "part": "Chapter V - Arrest of Persons",
             "clause": "Section 47 & Section 53",
+            "provisions": ["BNSS 2023 Section 47", "BNSS 2023 Section 53", "BNSS Section 47", "BNSS Section 53"],
             "text": (
                 "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Sections 47 & 53:\n"
                 "Section 47 (replacing CrPC Section 51): Whenever a person is arrested by a police officer, the police officer may search "
@@ -590,6 +654,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20120",
+            "retrieved_on": "2026-11-05",
             "page_number": 20,
             "char_count": 880
         },
@@ -599,6 +666,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Registration of First Information Report (FIR), Zero FIR, and e-FIR Mandate",
             "part": "Chapter XIII - Information to the Police and Their Powers to Investigate",
             "clause": "Section 173",
+            "provisions": ["BNSS 2023 Section 173", "BNSS Section 173", "Section 173"],
             "text": (
                 "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Section 173 (replacing CrPC Section 154):\n"
                 "(1) Every information relating to the commission of a cognizable offence, if given orally to an officer in charge of a "
@@ -611,6 +679,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20120",
+            "retrieved_on": "2026-11-05",
             "page_number": 62,
             "char_count": 830
         },
@@ -620,6 +691,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Mandatory Forensic Investigation for Heinous Offences and Videography of Search",
             "part": "Chapter XIII - Information to the Police and Their Powers to Investigate",
             "clause": "Section 176",
+            "provisions": ["BNSS 2023 Section 176", "BNSS Section 176", "Section 176"],
             "text": (
                 "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Section 176(3) (Forensic Mandate):\n"
                 "On receipt of every information relating to the commission of an offence which is punishable for seven years or more, "
@@ -630,6 +702,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20120",
+            "retrieved_on": "2026-11-05",
             "page_number": 65,
             "char_count": 790
         },
@@ -639,6 +714,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Police Custody vs. Judicial Custody and Default Statutory Bail Timelines (60/90 Days)",
             "part": "Chapter XIII - Information to the Police and Their Powers to Investigate",
             "clause": "Section 187",
+            "provisions": ["BNSS 2023 Section 187", "BNSS Section 187", "Section 187"],
             "text": (
                 "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Section 187 (replacing CrPC Section 167):\n"
                 "Procedure when investigation cannot be completed in twenty-four hours: The Magistrate may authorize detention of the accused "
@@ -649,29 +725,40 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20120",
+            "retrieved_on": "2026-11-05",
             "page_number": 72,
             "char_count": 870
         },
         {
-            "id": "bnss_sec_479_482_bail",
-            "article_number": "BNSS 2023 Section 479 & 482",
-            "title": "Bail Provisions for Undertrials, Non-Bailable Offences, and Anticipatory Bail",
+            "id": "bnss_sec_479_480_482_483_bail",
+            "article_number": "BNSS 2023 Section 479, 480, 482 & 483",
+            "title": "Bail Provisions: Undertrials (Sec 479), Regular Bail in Custody (Sec 480 & 483), and Anticipatory Bail (Sec 482)",
             "part": "Chapter XXXV - Provisions as to Bail and Bonds",
-            "clause": "Section 479 & Section 482",
+            "clause": "Section 479, 480, 482, 483",
+            "provisions": [
+                "BNSS 2023 Section 479", "BNSS 2023 Section 480", "BNSS 2023 Section 482", "BNSS 2023 Section 483",
+                "BNSS Section 479", "BNSS Section 480", "BNSS Section 482", "BNSS Section 483"
+            ],
             "text": (
-                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Sections 479 & 482:\n"
+                "Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS) - Chapter XXXV (Bail Provisions):\n"
                 "Section 479 (replacing CrPC Section 436A): Maximum period for which an undertrial prisoner can be detained: where a person "
-                "has, during the period of investigation, inquiry or trial of an offence, undergone detention for a period extending up to "
-                "one-half of the maximum period of imprisonment specified for that offence under law, he shall be released by the Court on bail.\n"
-                "First-time offenders: Where the person is a first-time offender (never previously convicted of any offence), he shall be released "
-                "on bail if he has undergone detention for up to one-third of the maximum imprisonment period.\n"
-                "Section 482 (replacing CrPC Section 438): Direction for grant of bail to person apprehending arrest (Anticipatory Bail) by the "
-                "High Court or Court of Session."
+                "has, during investigation, inquiry or trial, undergone detention for up to one-half of the maximum imprisonment period, he shall "
+                "be released on bail. First-time offenders (never previously convicted) shall be released on bail after undergoing detention for up to one-third.\n"
+                "Section 480 & 483 (replacing CrPC Sections 437 & 439 - Regular Custody Bail): When any person accused of or suspected of the commission "
+                "of any non-bailable offence is arrested or detained in custody, regular bail may be granted by the Magistrate (Section 480) or "
+                "by the High Court or Court of Session (Section 483).\n"
+                "Section 482 (replacing CrPC Section 438 - Anticipatory Bail): Direction for grant of bail to a person apprehending arrest "
+                "may be issued by the High Court or the Court of Session before the arrest takes place."
             ),
             "source": "Bharatiya Nagarik Suraksha Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20120",
+            "retrieved_on": "2026-11-05",
             "page_number": 195,
-            "char_count": 920
+            "char_count": 940
         },
 
         # ==========================================
@@ -683,6 +770,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Right of Private Defence of Body and Property (Replacing IPC 96-106)",
             "part": "Chapter III - General Exceptions",
             "clause": "Section 35 to 44",
+            "provisions": ["BNS 2023 Section 35", "BNS 2023 Section 38", "BNS 2023 Section 44", "BNS Section 35", "BNS Section 38"],
             "text": (
                 "Bharatiya Nyaya Sanhita, 2023 (BNS) - Sections 35 to 44:\n"
                 "Nothing is an offence which is done in the exercise of the right of private defence. Every person has a right to defend "
@@ -694,6 +782,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nyaya Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20121",
+            "retrieved_on": "2026-11-05",
             "page_number": 12,
             "char_count": 820
         },
@@ -703,6 +794,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Offences Against Women: Rape, Punishment, and Sexual Intercourse by Deceitful Means",
             "part": "Chapter V - Offences Against Women and Children",
             "clause": "Section 63, 64, 69",
+            "provisions": ["BNS 2023 Section 63", "BNS 2023 Section 64", "BNS 2023 Section 69", "BNS Section 63", "BNS Section 64", "BNS Section 69"],
             "text": (
                 "Bharatiya Nyaya Sanhita, 2023 (BNS) - Sections 63 to 69:\n"
                 "Section 63 & 64 (replacing IPC 375/376): Defines rape and prescribes rigorous imprisonment for not less than ten years "
@@ -714,6 +806,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nyaya Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20121",
+            "retrieved_on": "2026-11-05",
             "page_number": 22,
             "char_count": 860
         },
@@ -723,6 +818,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Assault on Woman to Outrage Modesty, Stalking, and Sexual Harassment (Replacing IPC 354, 354D, 509)",
             "part": "Chapter V - Offences Against Women and Children",
             "clause": "Section 74, 75, 78, 79",
+            "provisions": ["BNS 2023 Section 74", "BNS 2023 Section 75", "BNS 2023 Section 78", "BNS 2023 Section 79", "BNS Section 74", "BNS Section 78", "BNS Section 79"],
             "text": (
                 "Bharatiya Nyaya Sanhita, 2023 (BNS) - Sections 74 to 79:\n"
                 "Section 74 (replacing IPC 354): Whoever assaults or uses criminal force to any woman, intending to outrage or knowing it to "
@@ -734,6 +830,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nyaya Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20121",
+            "retrieved_on": "2026-11-05",
             "page_number": 25,
             "char_count": 920
         },
@@ -743,6 +842,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Offences Affecting Life and Personal Safety: Murder, Hurt, and Grievous Hurt",
             "part": "Chapter VI - Offences Affecting the Human Body",
             "clause": "Section 103, 115, 118",
+            "provisions": ["BNS 2023 Section 103", "BNS 2023 Section 115", "BNS 2023 Section 118", "BNS Section 103", "BNS Section 115", "BNS Section 118"],
             "text": (
                 "Bharatiya Nyaya Sanhita, 2023 (BNS) (replacing Indian Penal Code 1860):\n"
                 "Section 103 (replacing IPC 302): Whoever commits murder shall be punished with death or imprisonment for life, and shall also be liable to fine.\n"
@@ -752,6 +852,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nyaya Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20121",
+            "retrieved_on": "2026-11-05",
             "page_number": 32,
             "char_count": 620
         },
@@ -761,6 +864,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Causing Death by Negligence, Hit-and-Run Rash Driving, and Medical Negligence",
             "part": "Chapter VI - Offences Affecting the Human Body",
             "clause": "Section 106",
+            "provisions": ["BNS 2023 Section 106", "BNS Section 106"],
             "text": (
                 "Bharatiya Nyaya Sanhita, 2023 (BNS) - Section 106 (replacing IPC 304A):\n"
                 "(1) Whoever causes the death of any person by doing any rash or negligent act not amounting to culpable homicide, shall be punished "
@@ -772,6 +876,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nyaya Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20121",
+            "retrieved_on": "2026-11-05",
             "page_number": 34,
             "char_count": 910
         },
@@ -781,6 +888,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Offences Against Property: Theft, Cheating, and Dishonest Inducement",
             "part": "Chapter XVII - Offences Against Property",
             "clause": "Section 303 & Section 318",
+            "provisions": ["BNS 2023 Section 303", "BNS 2023 Section 318", "BNS Section 303", "BNS Section 318"],
             "text": (
                 "Bharatiya Nyaya Sanhita, 2023 (BNS) (replacing Indian Penal Code 1860):\n"
                 "Section 303 (replacing IPC 378/379): Whoever intending to take dishonestly any movable property out of the possession of any person "
@@ -790,6 +898,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nyaya Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20121",
+            "retrieved_on": "2026-11-05",
             "page_number": 88,
             "char_count": 680
         },
@@ -799,6 +910,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Criminal Intimidation and Extortion (Replacing IPC 503 & 506)",
             "part": "Chapter XVIII - Offences Affecting the Human Body",
             "clause": "Section 351",
+            "provisions": ["BNS 2023 Section 351", "BNS Section 351"],
             "text": (
                 "Bharatiya Nyaya Sanhita, 2023 (BNS) - Section 351 (replacing IPC 503/506):\n"
                 "Whoever threatens another with any injury to his person, reputation or property, or to the person or reputation of any one in whom "
@@ -809,6 +921,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Bharatiya Nyaya Sanhita, 2023",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/20121",
+            "retrieved_on": "2026-11-05",
             "page_number": 95,
             "char_count": 760
         },
@@ -822,6 +937,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Right to Information: Filing Application and Mandatory 48-Hour Life/Liberty Timelines",
             "part": "Chapter II - Right to Information and Obligations of Public Authorities",
             "clause": "Section 3, 6, 7",
+            "provisions": ["RTI Act 2005 Section 3", "RTI Act 2005 Section 6", "RTI Act 2005 Section 7", "RTI Section 3", "RTI Section 6", "RTI Section 7"],
             "text": (
                 "Right to Information Act, 2005 - Sections 3, 6 & 7:\n"
                 "Section 3: Subject to the provisions of this Act, all citizens shall have the right to information held by public authorities.\n"
@@ -833,6 +949,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Right to Information Act, 2005",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/2065",
+            "retrieved_on": "2026-11-05",
             "page_number": 5,
             "char_count": 870
         },
@@ -842,6 +961,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Exemption from Disclosure of Information and Public Interest Override",
             "part": "Chapter II - Right to Information and Obligations of Public Authorities",
             "clause": "Section 8",
+            "provisions": ["RTI Act 2005 Section 8", "RTI Section 8"],
             "text": (
                 "Right to Information Act, 2005 - Section 8 (Statutory Exemptions):\n"
                 "Notwithstanding anything contained in this Act, there shall be no obligation to give any citizen information disclosure of which would "
@@ -852,6 +972,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Right to Information Act, 2005",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/2065",
+            "retrieved_on": "2026-11-05",
             "page_number": 8,
             "char_count": 860
         },
@@ -861,6 +984,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "First Appeal, Second Appeal to Information Commission, and CPIO Penalties",
             "part": "Chapter V - Appeals and Penalties",
             "clause": "Section 19 & Section 20",
+            "provisions": ["RTI Act 2005 Section 19", "RTI Act 2005 Section 20", "RTI Section 19", "RTI Section 20"],
             "text": (
                 "Right to Information Act, 2005 - Sections 19 & 20:\n"
                 "Section 19: Any person who does not receive a decision within thirty days or is aggrieved by a decision of the CPIO/SPIO may within thirty days "
@@ -873,6 +997,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Right to Information Act, 2005",
             "source_type": "Statute",
+            "text_type": "summary",
+            "source_url": "https://www.indiacode.nic.in/handle/123456789/2065",
+            "retrieved_on": "2026-11-05",
             "page_number": 14,
             "char_count": 880
         },
@@ -886,6 +1013,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Golden Triangle (Articles 14, 19, 21) & Just, Fair and Reasonable Procedure",
             "part": "Supreme Court Landmark Precedent (7-Judge Constitutional Bench)",
             "clause": "AIR 1978 SC 597",
+            "provisions": ["Maneka Gandhi", "Maneka Gandhi v. Union of India", "Article 21", "Article 14", "Article 19"],
             "text": (
                 "Maneka Gandhi v. Union of India (1978) 1 SCC 248 (Supreme Court of India):\n"
                 "The 7-judge Constitution Bench held that the 'procedure established by law' under Article 21 cannot be arbitrary, oppressive, or fanciful; "
@@ -896,6 +1024,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Supreme Court of India Landmark Precedent",
             "source_type": "Landmark Judgment",
+            "text_type": "summary",
+            "source_url": "https://main.sci.gov.in/judgment",
+            "retrieved_on": "2026-11-05",
             "page_number": 1,
             "char_count": 790
         },
@@ -905,6 +1036,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Mandatory Safeguards Against Custodial Torture and Arrest Guidelines",
             "part": "Supreme Court Landmark Precedent (2-Judge Bench)",
             "clause": "(1997) 1 SCC 416",
+            "provisions": ["D.K. Basu", "D.K. Basu v. State of West Bengal", "Article 21", "Article 22"],
             "text": (
                 "D.K. Basu v. State of West Bengal (1997) 1 SCC 416 (Supreme Court of India):\n"
                 "The Supreme Court laid down 11 mandatory guidelines to prevent custodial violence, wrongful police detention, and deaths in police custody:\n"
@@ -918,6 +1050,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Supreme Court of India Landmark Precedent",
             "source_type": "Landmark Judgment",
+            "text_type": "summary",
+            "source_url": "https://main.sci.gov.in/judgment",
+            "retrieved_on": "2026-11-05",
             "page_number": 1,
             "char_count": 960
         },
@@ -927,6 +1062,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Right to Privacy as a Fundamental Right under Article 21",
             "part": "Supreme Court Landmark Precedent (9-Judge Constitutional Bench)",
             "clause": "(2017) 10 SCC 1",
+            "provisions": ["Puttaswamy", "Justice K.S. Puttaswamy v. Union of India", "Article 21", "Right to Privacy"],
             "text": (
                 "Justice K.S. Puttaswamy (Retd.) v. Union of India (2017) 10 SCC 1 (Supreme Court of India):\n"
                 "A unanimous 9-judge Constitution Bench held that the Right to Privacy is a fundamental right protected intrinsically under Article 21 "
@@ -937,6 +1073,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Supreme Court of India Landmark Precedent",
             "source_type": "Landmark Judgment",
+            "text_type": "summary",
+            "source_url": "https://main.sci.gov.in/judgment",
+            "retrieved_on": "2026-11-05",
             "page_number": 1,
             "char_count": 830
         },
@@ -946,6 +1085,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Decriminalization of Consensual Relations and Constitutional Morality",
             "part": "Supreme Court Landmark Precedent (5-Judge Constitutional Bench)",
             "clause": "(2018) 10 SCC 1",
+            "provisions": ["Navtej Singh Johar", "Navtej Singh Johar v. Union of India", "Navtej Johar", "Article 14", "Article 15", "Article 21"],
             "text": (
                 "Navtej Singh Johar v. Union of India (2018) 10 SCC 1 (Supreme Court of India):\n"
                 "A 5-judge Constitution Bench struck down Section 377 of the Indian Penal Code to the extent that it criminalized consensual sexual acts "
@@ -955,6 +1095,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Supreme Court of India Landmark Precedent",
             "source_type": "Landmark Judgment",
+            "text_type": "summary",
+            "source_url": "https://main.sci.gov.in/judgment",
+            "retrieved_on": "2026-11-05",
             "page_number": 1,
             "char_count": 780
         },
@@ -964,6 +1107,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Guidelines Against Workplace Sexual Harassment under Articles 14, 19, 21",
             "part": "Supreme Court Landmark Precedent (3-Judge Bench)",
             "clause": "(1997) 6 SCC 241",
+            "provisions": ["Vishaka", "Vishaka v. State of Rajasthan", "Article 14", "Article 19", "Article 21"],
             "text": (
                 "Vishaka v. State of Rajasthan (1997) 6 SCC 241 (Supreme Court of India):\n"
                 "The Supreme Court formulated the binding Vishaka Guidelines to prevent sexual harassment of women at the workplace, holding that "
@@ -974,6 +1118,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Supreme Court of India Landmark Precedent",
             "source_type": "Landmark Judgment",
+            "text_type": "summary",
+            "source_url": "https://main.sci.gov.in/judgment",
+            "retrieved_on": "2026-11-05",
             "page_number": 1,
             "char_count": 860
         },
@@ -983,6 +1130,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Mandatory Notice under Section 41A and Safeguards Against Routine Arrests",
             "part": "Supreme Court Landmark Precedent (2-Judge Bench)",
             "clause": "(2014) 8 SCC 273",
+            "provisions": ["Arnesh Kumar", "Arnesh Kumar v. State of Bihar", "Article 21", "Section 41A", "BNSS Section 35"],
             "text": (
                 "Arnesh Kumar v. State of Bihar (2014) 8 SCC 273 (Supreme Court of India):\n"
                 "The Supreme Court held that arrest brings humiliation, curtails freedom and casts scars forever. Police officers shall not arrest "
@@ -994,6 +1142,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Supreme Court of India Landmark Precedent",
             "source_type": "Landmark Judgment",
+            "text_type": "summary",
+            "source_url": "https://main.sci.gov.in/judgment",
+            "retrieved_on": "2026-11-05",
             "page_number": 1,
             "char_count": 850
         },
@@ -1003,6 +1154,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Mandatory Registration of FIR in Cognizable Offences",
             "part": "Supreme Court Landmark Precedent (5-Judge Constitutional Bench)",
             "clause": "(2014) 2 SCC 1",
+            "provisions": ["Lalita Kumari", "Lalita Kumari v. Government of U.P.", "Section 154", "BNSS Section 173"],
             "text": (
                 "Lalita Kumari v. Government of Uttar Pradesh (2014) 2 SCC 1 (Supreme Court of India):\n"
                 "A 5-judge Constitution Bench held that registration of an FIR is mandatory under Section 154 of the Code of Criminal Procedure "
@@ -1014,6 +1166,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Supreme Court of India Landmark Precedent",
             "source_type": "Landmark Judgment",
+            "text_type": "summary",
+            "source_url": "https://main.sci.gov.in/judgment",
+            "retrieved_on": "2026-11-05",
             "page_number": 1,
             "char_count": 870
         },
@@ -1023,6 +1178,7 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             "title": "Freedom of Speech Online and Striking Down of Section 66A IT Act",
             "part": "Supreme Court Landmark Precedent (2-Judge Bench)",
             "clause": "(2015) 5 SCC 1",
+            "provisions": ["Shreya Singhal", "Shreya Singhal v. Union of India", "Article 19"],
             "text": (
                 "Shreya Singhal v. Union of India (2015) 5 SCC 1 (Supreme Court of India):\n"
                 "The Supreme Court struck down Section 66A of the Information Technology Act, 2000 in its entirety, holding it unconstitutional "
@@ -1033,6 +1189,9 @@ def get_expanded_statutory_and_precedent_corpus() -> List[Dict[str, Any]]:
             ),
             "source": "Supreme Court of India Landmark Precedent",
             "source_type": "Landmark Judgment",
+            "text_type": "summary",
+            "source_url": "https://main.sci.gov.in/judgment",
+            "retrieved_on": "2026-11-05",
             "page_number": 1,
             "char_count": 880
         }

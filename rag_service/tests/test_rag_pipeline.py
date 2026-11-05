@@ -14,8 +14,8 @@ try:
     from main import app
 except ImportError:
     from rag_server import app
-from vector_store import hybrid_retrieve, extract_exact_legal_references
-from rag_chain import RAGLegalResponse, classify_legal_domain
+from vector_store import hybrid_retrieve, extract_exact_legal_references, matches_ref
+from rag_chain import RAGLegalResponse, CitedArticle, classify_legal_domain, verify_grounded_response
 
 client = TestClient(app)
 
@@ -161,7 +161,104 @@ def test_multi_turn_chat_history_rewriting():
     assert response.status_code == 200
     data = response.json()
     assert len(data["answer"]) > 30
-    # Must retrieve advocate / legal consultation rights (Article 22(1) or BNSS Section 37)
+    # Must retrieve advocate / legal consultation rights (Article 22(1) or BNSS Section 38)
     ans_lower = data["answer"].lower()
-    has_lawyer_context = any(term in ans_lower for term in ["advocate", "lawyer", "consult", "legal practitioner", "section 37", "article 22"])
+    has_lawyer_context = any(term in ans_lower for term in ["advocate", "lawyer", "consult", "legal practitioner", "section 38", "section 37", "article 22"])
     assert has_lawyer_context, f"Response should contain lawyer/advocate consultation grounding, got: {data['answer'][:200]}"
+
+
+def test_article_21_exact_match_does_not_boost_210_to_219():
+    """
+    Reviewer Requirement 1:
+    Assert exact-matching logic prevents 'Article 21' queries from boosting Articles 210–219.
+    """
+    assert matches_ref("Article 21", ["Article 21"]) is True
+    assert matches_ref("Article 21", ["Article 21A"]) is True
+    assert matches_ref("Article 21", ["Article 21(1)"]) is True
+
+    # Critical assertions: Articles 210 through 219 must NOT match Article 21
+    for art_num in range(210, 220):
+        assert matches_ref("Article 21", [f"Article {art_num}"]) is False, f"Article 21 matched Article {art_num}"
+
+    # End-to-end retrieval check
+    results = hybrid_retrieve("What are the core protections guaranteed by Article 21?", top_k=5)
+    for r in results:
+        art = r["metadata"].get("article_number", "")
+        if any(f"Article {n}" in art for n in range(210, 220)):
+            assert r.get("retrieval_type") != "exact_reference", f"Sub-article {art} was falsely given exact_reference boost!"
+
+
+def test_statute_qualified_refs_no_collision():
+    """
+    Reviewer Requirement 1:
+    Assert statute-qualified references prevent collision between CPA and BNSS sections.
+    """
+    assert matches_ref("BNSS Section 58", ["CPA 2019 Section 58"]) is False
+    assert matches_ref("BNSS Section 58", ["BNSS 2023 Section 58"]) is True
+    assert matches_ref("CPA Section 35", ["BNSS 2023 Section 35"]) is False
+    assert matches_ref("CPA Section 35", ["CPA 2019 Section 35"]) is True
+
+
+def test_strict_verifier_drops_ungrounded_citations():
+    """
+    Reviewer Requirement 2:
+    Strict zero-hallucination verification: ungrounded citations are dropped,
+    fabricated quotes are dropped, and valid quotes are preserved WITHOUT overwriting.
+    """
+    mock_docs = [
+        {
+            "text": "No person shall be deprived of his life or personal liberty except according to procedure established by law.",
+            "metadata": {
+                "article_number": "Article 21",
+                "provisions": ["Article 21"],
+                "source": "Constitution of India"
+            }
+        },
+        {
+            "text": "When any person is arrested and interrogated by the police, he shall be entitled to meet an advocate of his choice during interrogation.",
+            "metadata": {
+                "article_number": "BNSS 2023 Section 38",
+                "provisions": ["BNSS 2023 Section 38", "BNSS Section 38"],
+                "source": "Bharatiya Nagarik Suraksha Sanhita, 2023"
+            }
+        }
+    ]
+
+    valid_quote = "deprived of his life or personal liberty except according to procedure established by law"
+    test_response = RAGLegalResponse(
+        query="Test query",
+        answer="Valid grounded answer",
+        cited_articles=[
+            # 1. Valid citation: provision in docs and verbatim quote in text
+            CitedArticle(
+                article="Article 21",
+                part="Part III",
+                exact_quote=valid_quote
+            ),
+            # 2. Fabricated quote: provision in docs, but quote is hallucinated
+            CitedArticle(
+                article="BNSS Section 38",
+                part="Chapter V",
+                exact_quote="Accused can have tea with police inspector whenever they wish."
+            ),
+            # 3. Fabricated provision: not in docs
+            CitedArticle(
+                article="Article 370",
+                part="Part XXI",
+                exact_quote="Special temporary provisions regarding state autonomy"
+            )
+        ],
+        recommended_case_category="Criminal",
+        urgency_level="High",
+        suggested_action="Consult advocate"
+    )
+
+    verified_resp, dropped_count = verify_grounded_response(test_response, mock_docs)
+
+    # Only 1 citation survived
+    assert len(verified_resp.cited_articles) == 1
+    assert dropped_count == 2
+    assert verified_resp.dropped_citations_count == 2
+    assert verified_resp.cited_articles[0].article == "Article 21"
+    # Verifier MUST NOT overwrite quotes with doc_text[:120]
+    assert verified_resp.cited_articles[0].exact_quote == valid_quote

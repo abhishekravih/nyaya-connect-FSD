@@ -52,7 +52,7 @@ jobs:
           PYTHONPATH=.. pytest tests/ -v
 
   rag-tests:
-    name: Constitutional RAG Tests
+    name: Constitutional RAG Tests & Offline Eval
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -65,13 +65,29 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: rag_service/requirements.txt
+
+      - name: Cache HuggingFace Models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ runner.os }}-huggingface-${{ hashFiles('rag_service/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-huggingface-
+
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Run RAG Tests
+
+      - name: Run RAG Tests (Strict Gate)
         run: |
-          pytest tests/ -v || echo "RAG tests executed"
+          pytest tests/ -v
+
+      - name: Run Offline Smoke Eval with Fail-Under Gate
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'MOCK_KEY_FOR_CI_OFFLINE' }}
+        run: |
+          python eval/eval_smoke_test.py
 
   docker-compose-validate:
     name: Docker Compose Syntax Validation
