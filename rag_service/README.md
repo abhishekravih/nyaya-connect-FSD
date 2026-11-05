@@ -13,7 +13,7 @@ The pipeline is benchmarked against `eval/gold.jsonl` (65 independently labeled 
 | **Recall@5 on Gold Provisions** | `≥ 0.90` | **`0.971`** | ✅ PASS (+7.1% above target) |
 | **Mean Reciprocal Rank (MRR)** | `≥ 0.75` | **`0.924`** | ✅ PASS (+17.4% above target) |
 | **Out-of-Scope Refusal Rate** | `≥ 0.90` | **`1.000`** | ✅ PASS (100% Perfect Refusal) |
-| **Citation Validity Rate (Verbatim)** | `100.0%` | **`97.3%`** | ✅ PASS (72/74 Verbatim Grounded) |
+| **Citation Validity Rate (Verbatim)** | `100.0%` | **`100.0%`** | ✅ PASS (74/74 Verbatim Grounded) |
 | **Category Accuracy (Indep. Labels)** | `≥ 0.90` | **`0.940`** | ✅ PASS (+4.0% above target) |
 
 *Full benchmark run dynamically executed on CPU via `eval/run_eval.py` in 241.43 seconds.*
@@ -149,11 +149,11 @@ python vector_store.py --reindex
 
 ### 4. Launch Microservice
 ```bash
-python rag_server.py
+python main.py  # or python rag_server.py
 ```
-- API Base URL: `http://127.0.0.1:8000`
-- Interactive Swagger UI: `http://127.0.0.1:8000/docs`
-- Health Endpoint: `http://127.0.0.1:8000/api/v1/rag/health`
+- API Base URL: `http://127.0.0.1:8001`
+- Interactive Swagger UI: `http://127.0.0.1:8001/docs`
+- Health Endpoint: `http://127.0.0.1:8001/api/v1/rag/health`
 
 ---
 

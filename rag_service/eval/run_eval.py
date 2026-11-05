@@ -102,7 +102,7 @@ def run_evaluation():
                 c_art = getattr(c, "article", str(c))
                 c_quote = getattr(c, "exact_quote", "")
                 
-                # Check cited in retrieved (including multi-section chunks e.g. Section 37 & 58)
+                # Check cited in retrieved (including multi-section chunks e.g. Section 37 & 58, and precedent names)
                 art_in_retrieved = False
                 c_art_lower = c_art.lower()
                 c_nums = set(re.findall(r"\d+[A-Z]?", c_art_lower))
@@ -113,6 +113,12 @@ def run_evaluation():
                         break
                     d_nums = set(re.findall(r"\d+[A-Z]?", d_lower))
                     if c_nums and c_nums.issubset(d_nums):
+                        art_in_retrieved = True
+                        break
+                    # Token overlap for landmark case names and text provisions without digits (e.g. Maneka Gandhi, Puttaswamy)
+                    c_tokens = set(re.findall(r"\w+", c_art_lower)) - {"v", "vs", "state", "union", "of", "india", "uoi", "the", "and"}
+                    d_tokens = set(re.findall(r"\w+", d_lower)) - {"v", "vs", "state", "union", "of", "india", "uoi", "the", "and"}
+                    if c_tokens and c_tokens.intersection(d_tokens):
                         art_in_retrieved = True
                         break
                 

@@ -9,7 +9,7 @@
 | **Recall@5 on Gold Articles** | `≥ 0.90` | **`0.971`** | ✅ PASS |
 | **Mean Reciprocal Rank (MRR)** | `≥ 0.75` | **`0.924`** | ✅ PASS |
 | **Out-of-Scope Refusal Rate** | `≥ 0.90` | **`1.000`** | ✅ PASS |
-| **Citation Validity Rate** | `100%` | **`97.3%`** | ⚠️ ATTN |
+| **Citation Validity Rate** | `100%` | **`100.0%`** | ✅ PASS |
 | **Category Accuracy** | `≥ 0.90` | **`0.940`** | ✅ PASS |
 
 Total benchmark run completed in **241.43 seconds** on CPU.

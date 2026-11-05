@@ -294,6 +294,7 @@ def ask_legal_question(request: AskRequest):
 if __name__ == "__main__":
     import uvicorn
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 8000))
+    # Reviewer Item 1 Fix: Default fallback to 8001 to prevent port collision with Person 4 backend on 8000
+    port = int(os.getenv("PORT", 8001))
     logger.info(f"🚀 Starting NyayaConnect Canonical Legal RAG Engine on http://{host}:{port}")
     uvicorn.run(app, host=host, port=port)
