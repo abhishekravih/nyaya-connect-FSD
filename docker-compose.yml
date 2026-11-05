@@ -1,0 +1,96 @@
+# =====================================================================
+# Root docker-compose.yml orchestrated by Person 4
+# Systems Integrator & DevOps Lead for Legal-advisor-FSD (NyayaConnect)
+# =====================================================================
+
+version: '3.9'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: nyayaconnect_db
+    restart: unless-stopped
+    environment:
+      # Required variable: container fails immediately if DB_PASSWORD is not set in .env
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      MYSQL_DATABASE: nyayaconnect
+    ports:
+      - "3306:3306"
+    volumes:
+      - "./backend/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql"
+      - "db_data:/var/lib/mysql"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root --password=\"$${MYSQL_ROOT_PASSWORD}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  rag_service:
+    build:
+      context: ./rag_service
+      dockerfile: Dockerfile
+    container_name: nyayaconnect_rag
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    volumes:
+      - "./rag_service/chroma_db:/app/chroma_db"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nyayaconnect_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      rag_service:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Explicit network wiring inside Docker
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_PASSWORD=${DB_PASSWORD}
+      - RAG_SERVICE_URL=http://rag_service:8001/api/v1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+        - NEXT_PUBLIC_USE_MOCKS=${NEXT_PUBLIC_USE_MOCKS:-false}
+    container_name: nyayaconnect_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+
+volumes:
+  db_data:

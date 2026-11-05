@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .vercel
 .env*
 
@@ -5,3 +6,68 @@ node_modules
 .next
 .vercel
 .env*.local
+=======
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Exceptions to allow examples
+!.env.example
+!.env.local.example
+
+# Database & Vector DB
+*.db
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+chroma_db/
+!rag_service/chroma_db/.gitkeep
+
+# IDE and OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+>>>>>>> d9d8d91c31ae93844f1220e72bccbba66157303f
