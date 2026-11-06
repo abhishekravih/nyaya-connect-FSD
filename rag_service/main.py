@@ -214,10 +214,35 @@ def root():
     }
 
 
+
+
 @app.get("/health", tags=["Health"])
+@app.get("/health/live", tags=["Health"])
 def docker_health():
-    """Docker container healthcheck endpoint."""
+    """Liveness probe indicating process is up."""
     return {"status": "healthy"}
+
+
+@app.get("/health/ready", tags=["Health"])
+def readiness_probe():
+    """
+    Readiness probe for Docker Compose and Kubernetes orchestration.
+    Validates ChromaDB collection readiness.
+    """
+    try:
+        col = get_collection()
+        count = col.count()
+        return {
+            "status": "ready",
+            "collection": COLLECTION_NAME,
+            "chunks_indexed": count
+        }
+    except Exception as e:
+        logger.error(f"RAG readiness probe failed: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "not_ready", "error": str(e)}
+        )
 
 
 @app.get("/api/v1/rag/health", tags=["Health"])

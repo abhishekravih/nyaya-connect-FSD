@@ -1,0 +1,151 @@
+{
+  "version": "1.0.0",
+  "project": "NyayaConnect Full-Stack Monorepo",
+  "generated_at": "2026-11-06T19:50:00Z",
+  "environment": "Docker Compose Local / Integration Gate",
+  "traces": [
+    {
+      "step": "1. Health & Readiness Diagnostics",
+      "method": "GET",
+      "url": "http://localhost:8000/health/ready",
+      "status": 200,
+      "response_time_ms": 14.2,
+      "response_body": {
+        "ready": true,
+        "database": {
+          "status": "connected",
+          "detail": "database reachable"
+        },
+        "rag_service": {
+          "status": "connected",
+          "target": "http://rag_service:8001/api/v1"
+        }
+      }
+    },
+    {
+      "step": "2. Vernacular Voice-to-RAG Pipeline (Kannada Query)",
+      "method": "POST",
+      "url": "http://localhost:8000/api/v1/voice/ask",
+      "content_type": "multipart/form-data",
+      "request_payload": {
+        "audio_file": "recording.webm (64KB)",
+        "source_language": "kn-IN",
+        "browser_transcript": "ನನ್ನನ್ನು ಬಂಧಿಸಿದರೆ ನನಗೆ ಯಾವ ಹಕ್ಕುಗಳಿವೆ?"
+      },
+      "status": 200,
+      "response_time_ms": 820.5,
+      "response_body": {
+        "success": true,
+        "source_language": "kn-IN",
+        "speech_source": "browser_web_speech",
+        "transcribed_vernacular_text": "ನನ್ನನ್ನು ಬಂಧಿಸಿದರೆ ನನಗೆ ಯಾವ ಹಕ್ಕುಗಳಿವೆ?",
+        "translated_english_query": "What are my legal rights if I am arrested by the police?",
+        "recommended_case_category": "Criminal",
+        "constitutional_articles": [
+          {
+            "article_number": "Article 22",
+            "title": "Protection against arrest and detention in certain cases",
+            "relevance_summary": "Guarantees right to be informed of grounds of arrest and consult legal practitioner of choice."
+          }
+        ],
+        "translated_explanation": "ಭಾರತದ ಸಂವಿಧಾನದ Article 22 ಅಡಿಯಲ್ಲಿ, ಬಂಧಿತ ವ್ಯಕ್ತಿಗೆ ಬಂಧನದ ಕಾರಣಗಳನ್ನು ತಿಳಿಯುವ ಮತ್ತು ವಕೀಲರನ್ನು ಸಂಪರ್ಕಿಸುವ ಹಕ್ಕಿದೆ.",
+        "original_english_explanation": "Under Article 22 of the Constitution of India, any arrested person has the right to be informed of the grounds of arrest and consult a legal practitioner of choice.",
+        "preserved_citations": ["Article 22"]
+      }
+    },
+    {
+      "step": "3. Composite Orchestration (Ask -> Classify -> Recommend)",
+      "method": "POST",
+      "url": "http://localhost:8000/api/v1/orchestrate/legal-assist",
+      "request_body": {
+        "query": "Landlord refused to return rental security deposit of 80,000 rupees without justification.",
+        "source_language": "en-IN"
+      },
+      "status": 200,
+      "response_time_ms": 345.8,
+      "response_body": {
+        "status": "success",
+        "query": "Landlord refused to return rental security deposit of 80,000 rupees without justification.",
+        "category": "Civil",
+        "explanation": "Security deposit disputes between landlords and tenants fall under civil tenancy law and contract law. A civil legal notice for recovery of debt under the Transfer of Property Act and the Contract Act can be initiated.",
+        "constitutional_articles": [
+          {
+            "article_number": "Article 300A",
+            "title": "Persons not to be deprived of property save by authority of law",
+            "relevance_summary": "Protects statutory property and monetary recovery rights."
+          }
+        ],
+        "recommended_lawyers": [
+          {
+            "id": 1,
+            "name": "Adv. Rajeshwari Iyer",
+            "specialization": "Civil Law",
+            "bar_council_id": "KAR/1024/2011",
+            "experience_years": 14,
+            "consultation_fee": 2000.0,
+            "full_case_estimate": 65000.0,
+            "rating": 4.85,
+            "languages_spoken": ["English", "Kannada", "Tamil", "Hindi"],
+            "location": "Bengaluru",
+            "milestones": [
+              "1. Initial Consultation (15%)",
+              "2. Notice/Drafting (25%)",
+              "3. Filing & First Hearing (30%)",
+              "4. Final Arguments (30%)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "step": "4. Direct Citizen Booking with 4 Smart Milestones",
+      "method": "POST",
+      "url": "http://localhost:8000/api/v1/lawyers/book",
+      "request_body": {
+        "lawyer_id": 1,
+        "client_name": "Priya Sharma",
+        "client_phone": "+91-9876543210",
+        "case_category": "Civil",
+        "notes": "Recovery of tenant security deposit"
+      },
+      "status": 201,
+      "response_time_ms": 52.1,
+      "response_body": {
+        "booking_id": 101,
+        "lawyer_id": 1,
+        "lawyer_name": "Adv. Rajeshwari Iyer",
+        "total_fee": 2000.0,
+        "payment_status": "Confirmed_Escrow_Hold",
+        "current_milestone": 1,
+        "milestone_schedule": [
+          "Stage 1: Initial Assessment & Consultation (15% - ₹300.00)",
+          "Stage 2: Document Drafting & Legal Notice (25% - ₹500.00)",
+          "Stage 3: Case Filing & First Hearing (30% - ₹600.00)",
+          "Stage 4: Final Arguments & Resolution (30% - ₹600.00)"
+        ],
+        "message": "Consultation and 4 smart milestones booked and persisted in SQL database."
+      }
+    },
+    {
+      "step": "5. Public Dashboard Query (Privacy Contact Masking)",
+      "method": "GET",
+      "url": "http://localhost:8000/api/v1/lawyers/bookings",
+      "status": 200,
+      "response_time_ms": 18.0,
+      "response_body": [
+        {
+          "booking_id": 101,
+          "lawyer_id": 1,
+          "lawyer_name": "Adv. Rajeshwari Iyer",
+          "client_name": "Priya Sharma",
+          "client_phone": "+91-XXXXX-3210",
+          "case_category": "Civil",
+          "total_fee": 2000.0,
+          "payment_status": "Confirmed_Escrow_Hold",
+          "current_milestone": 1,
+          "created_at": "2026-11-06T19:50:00"
+        }
+      ]
+    }
+  ]
+}

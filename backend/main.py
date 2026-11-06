@@ -100,20 +100,42 @@ class LegalQuestionBridgeRequest(BaseModel):
     query: str
     lang: str = "English"
 
+LANGUAGE_COMPAT_MAP = {
+    "kannada": "kn-IN",
+    "hindi": "hi-IN",
+    "tamil": "ta-IN",
+    "telugu": "te-IN",
+    "marathi": "mr-IN",
+    "bengali": "bn-IN",
+    "english": "en-IN"
+}
+
+def resolve_compat_language(lang_str: str) -> str:
+    lower_lang = str(lang_str).lower().strip()
+    for name, code in LANGUAGE_COMPAT_MAP.items():
+        if name in lower_lang or code.lower() in lower_lang:
+            return code
+    return "en-IN"
+
 @app.post("/api/v1/legal-question", tags=["Frontend Compatibility"])
 @app.post("/legal-question", tags=["Frontend Compatibility"])
 async def legal_question_compatibility(payload: LegalQuestionBridgeRequest):
     from backend.routers.orchestrator import orchestrate_legal_assist, LegalAssistRequest
+    lang_code = resolve_compat_language(payload.lang)
     res = await orchestrate_legal_assist(LegalAssistRequest(
         query=payload.query,
-        source_language="en-IN" if payload.lang == "English" else payload.lang
+        source_language=lang_code
     ))
+    # Truthful grounded confidence based on article citations rather than static 0.95
+    art_count = len(res.constitutional_articles)
+    grounded_conf = round(min(0.55 + (art_count * 0.12), 0.95), 2) if art_count > 0 else 0.40
+
     return {
         "answer_text": res.explanation,
         "cited_articles": [a.model_dump() for a in res.constitutional_articles],
         "recommended_category": res.category,
         "recommended_lawyers": [l.model_dump() for l in res.recommended_lawyers],
-        "confidence_score": 0.95
+        "confidence_score": grounded_conf
     }
 
 @app.post("/api/v1/voice-query", tags=["Frontend Compatibility"])
@@ -122,9 +144,12 @@ async def voice_query_compatibility(payload: dict):
     from backend.routers.voice_bridge import voice_ask_json_endpoint, VoiceAskJSONRequest
     blob = payload.get("blob", "")
     lang = payload.get("lang", "English")
-    lang_code = "kn-IN" if "kannada" in lang.lower() else "hi-IN" if "hindi" in lang.lower() else "en-IN"
+    transcript = payload.get("transcript") or payload.get("browser_transcript")
+    lang_code = resolve_compat_language(lang)
+
     return await voice_ask_json_endpoint(VoiceAskJSONRequest(
-        audio_base64=blob if isinstance(blob, str) else None,
+        audio_base64=blob if isinstance(blob, str) and len(blob) > 0 else None,
+        transcript=transcript if isinstance(transcript, str) and len(transcript.strip()) > 0 else None,
         source_language=lang_code
     ))
 

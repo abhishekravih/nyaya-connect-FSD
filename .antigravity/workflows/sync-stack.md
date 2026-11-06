@@ -56,9 +56,19 @@ if ($missingBranches.Count -gt 0) {
 # 4. Safely create worktrees only when real teammate branches exist
 New-Item -ItemType Directory -Force -Path "../nyayaconnect-worktrees" | Out-Null
 
-git worktree add -B frontend-p1 ../nyayaconnect-worktrees/frontend origin/frontend-p1
-git worktree add -B backend-p2 ../nyayaconnect-worktrees/backend origin/backend-p2
-git worktree add -B rag-p3 ../nyayaconnect-worktrees/rag_service origin/rag-p3
+$worktreeMap = @(
+    @{ Target = "../nyayaconnect-worktrees/frontend"; Remote = "origin/frontend-p1" },
+    @{ Target = "../nyayaconnect-worktrees/backend";  Remote = "origin/backend-p2" },
+    @{ Target = "../nyayaconnect-worktrees/rag_service"; Remote = "origin/rag-p3" }
+)
+
+foreach ($wt in $worktreeMap) {
+    if (Test-Path $wt.Target) {
+        Write-Host "Worktree target '$($wt.Target)' already exists. Skipping add to avoid branch reset." -ForegroundColor Yellow
+    } else {
+        git worktree add $wt.Target $wt.Remote
+    }
+}
 
 Write-Host "All worktrees provisioned successfully:" -ForegroundColor Green
 git worktree list
@@ -157,7 +167,8 @@ foreach ($p in $expectedComposePorts) {
 $backendReqs = Get-Content backend/requirements.txt -Raw
 $ragReqs = Get-Content rag_service/requirements.txt -Raw
 
-if ($backendReqs -match "pydantic>=2" -and $ragReqs -match "pydantic>=2") {
+$pydanticPattern = "pydantic(\[email\])?(>=|==)2"
+if ($backendReqs -match $pydanticPattern -and $ragReqs -match $pydanticPattern) {
     Write-Host "Pydantic v2 parity confirmed across backend and rag_service." -ForegroundColor Green
 } else {
     Write-Error "Version discrepancy: Pydantic major version mismatch between services."

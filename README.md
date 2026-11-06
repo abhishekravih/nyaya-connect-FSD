@@ -1,91 +1,67 @@
-<<<<<<< HEAD
-# NyayaConnect
-
-NyayaConnect is a Next.js 14 demo for constitutional information, verified lawyer discovery, transparent milestone fees, and booking progress.
-
-## Setup
-
-```bash
-npm install
-npm run dev
-```
-
-Set environment variables in `.env.local`:
-
-```env
-NEXT_PUBLIC_USE_MOCKS=true
-NEXT_PUBLIC_API_BASE_URL=https://your-api.example
-```
-
-`NEXT_PUBLIC_USE_MOCKS=true` (the default unless explicitly set to `false`) uses local JSON fixtures and simulated latency. The demo does not need a backend. `NEXT_PUBLIC_API_BASE_URL` is required when mocks are disabled. The browser stores demo bookings in localStorage under `nyayaconnect-bookings-v1`; clearing that key resets the demo. Voice recording requires a secure browser context and microphone permission.
-
-## Folder structure
-
-- `src/app/` — App Router pages and global styles
-- `src/components/` — chat, voice, lawyer cards, booking modal, fee breakdown, and milestone UI
-- `src/context/BookingContext.jsx` — shared chat summary and persisted mock bookings
-- `src/hooks/` — client data hooks
-- `src/mocks/` — lawyer and RAG response fixtures
-- `src/services/apiClient.js` — all data access and mock/live switching
-
-## API client functions
-
-- `getLawyers(filters)` and `getLawyerById(id)` — lawyer directory and profile
-- `askLegalQuestion(query, lang)` — constitutional RAG answer with citations, suggested category, and confidence
-- `submitVoiceQuery(blob, lang)` — voice transcription (and optionally `rag_response` in a live response)
-- `createBooking(payload)` and `getBookings()` — booking creation and retrieval
-- `updateMilestone(bookingId, milestoneIndex, status)` — milestone status update
-
-Live endpoint paths are `/lawyers`, `/lawyers/:id`, `/legal-question`, `/voice-query`, `/bookings`, and `/bookings/:id/milestones/:index`. Keep components calling the API client rather than fetching directly.
-=======
 # NyayaConnect: Vernacular Legal Advisor & Lawyer Marketplace (FSD)
 
-[![Antigravity Full-Stack](https://img.shields.io/badge/Antigravity-2.0-blue.svg)](https://github.com/abhishekravih/Legal-advisor-FSD)
+[![NyayaConnect CI](https://github.com/abhishekravih/nyaya-connect-FSD/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekravih/nyaya-connect-FSD/actions)
+[![Antigravity Full-Stack](https://img.shields.io/badge/Antigravity-2.0-blue.svg)](https://github.com/abhishekravih/nyaya-connect-FSD)
 [![SDG 16](https://img.shields.io/badge/SDG%2016-Peace%2C%20Justice%20%26%20Strong%20Institutions-blueviolet)](https://sdgs.un.org/goals/goal16)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)](https://nextjs.org)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector%20Store-orange)](https://www.trychroma.com)
 
-**Legal-advisor-FSD** is a unified full-stack legal intelligence platform engineered inside Google Antigravity. It empowers Indian citizens to ask legal questions in regional languages (Kannada, Hindi, Tamil, Telugu, etc.), grounds answers in the Constitution of India via ChromaDB RAG, and instantly connects citizens with verified affordable lawyers with upfront pricing and 4 Smart Milestones.
+**NyayaConnect** is an integrated full-stack legal intelligence and marketplace platform engineered inside Google Antigravity. It empowers Indian citizens to ask legal questions in regional languages (Kannada, Hindi, Tamil, Telugu, Marathi, Bengali, English), grounds answers in the Constitution of India via ChromaDB RAG, and instantly connects citizens with verified affordable advocates with transparent pricing and 4 Smart Milestones.
 
 ---
 
-## 🏛️ Person 4: System Integration & DevOps Architecture
+## 🏛️ Person 4: Systems Integration & DevOps Architecture
 
-As **Person 4 (Systems Integrator and DevOps Lead)**, this repository establishes the unified multi-service monorepo, container orchestration, Git worktree workflow, and the 4-stage vernacular voice-to-RAG translation bridge.
+As **Person 4 (Systems Integrator and DevOps Lead)**, this repository establishes the unified multi-service monorepo, container orchestration, Git worktree workflow, vernacular voice translation pipeline, and composite API gateway.
 
 ```
-Legal-advisor-FSD/
+nyaya-connect-FSD/
 ├── .antigravity/
 │   └── workflows/
-│       └── sync-stack.md           # Antigravity Git worktree & branch sync workflow
-├── backend/                        # Person 2 (FastAPI Marketplace Backend)
+│       └── sync-stack.md           # Safe Git worktree & branch sync workflow with collision checks
+├── .github/
+│   └── workflows/
+│       └── ci.yml                  # GitHub Actions CI matrix: Frontend, Backend tests, RAG eval, Compose
+├── backend/                        # Person 2 & 4 (FastAPI Marketplace Backend & Integration Gateway)
+│   ├── auth/                       # JWT auth & security
 │   ├── routers/
-│   │   ├── voice_bridge.py         # Phase 2: 4-Stage Vernacular Voice-to-RAG Bridge
-│   │   ├── orchestrator.py         # Step 3: Composite 'Ask -> Classify -> Recommend' API
-│   │   └── lawyers.py              # Lawyer marketplace & 4 Smart Milestones
-│   ├── database.py                 # MySQL database connector with resilient fallback
-│   ├── schema.sql                  # Mapped to /docker-entrypoint-initdb.d/1_schema.sql
+│   │   ├── voice_bridge.py         # 4-Stage Vernacular Voice-to-RAG Pipeline with streaming 10MB cap
+│   │   ├── orchestrator.py         # Composite 'Ask -> Classify -> Recommend' API Gateway
+│   │   ├── lawyers.py              # Lawyer marketplace, direct booking, privacy phone masking
+│   │   └── bookings.py             # 4-stage smart milestone bookings (15%, 25%, 30%, 30%)
+│   ├── tests/
+│   │   ├── conftest.py             # Self-contained test fixture and isolated DB initialiser
+│   │   ├── test_lawyers.py         # SQL lawyer retrieval and booking unit & integration tests
+│   │   ├── test_health.py          # Liveness & readiness probe tests
+│   │   ├── test_voice_bridge.py    # Voice pipeline & legal citation tokenization tests
+│   │   └── test_marketplace.py    # Marketplace fee split & category audit tests
+│   ├── database.py                 # Resilient SQLAlchemy engine with URL.create for MySQL
+│   ├── schema.sql                  # MySQL 8.0 schema mapped to /docker-entrypoint-initdb.d
+│   ├── seed_data.py                # 30 realistic Indian lawyers across Civil, Consumer, Criminal
 │   ├── requirements.txt            # Python dependencies
-│   ├── main.py                     # Standardized CORS middleware & route registration
-│   └── Dockerfile                  # Optimized python:3.11-slim container
+│   ├── main.py                     # CORS middleware, route registration, and health probes
+│   └── Dockerfile                  # Container runtime
 ├── frontend/                       # Person 1 (Next.js 14 Vernacular UI)
 │   ├── src/
-│   │   ├── app/                    # Next.js App Router (page.tsx, layout.tsx)
+│   │   ├── app/                    # Next.js App Router (marketplace, bookings, chat)
+│   │   ├── components/             # ChatWindow, VoiceRecorderBar, LawyerCard, MilestoneTracker
 │   │   ├── services/
-│   │   │   └── apiClient.ts        # Live API client with NEXT_PUBLIC_USE_MOCKS toggle
+│   │   │   ├── apiClient.js        # Multipart audio upload & live API client
+│   │   │   └── apiClient.ts        # Typed API contracts
 │   │   └── utils/
 │   │       └── voiceFallback.ts    # Web Speech API zero-latency fallback engine
 │   ├── package.json
 │   ├── next.config.js
-│   ├── tsconfig.json
 │   └── Dockerfile                  # Multi-stage production container
 ├── rag_service/                    # Person 3 (ChromaDB Constitutional Engine)
 │   ├── chroma_db/                  # Persistent vector database volume
-│   ├── main.py                     # POST /api/v1/rag/ask endpoint with legal classification
+│   ├── main.py                     # /health, /health/live, /health/ready, and POST /api/v1/rag/ask
 │   ├── requirements.txt
 │   └── Dockerfile                  # Python container with ChromaDB & vector index
+├── docs/
+│   └── evidence/                   # Release verification evidence, HAR network trace, test logs
 ├── .env.example                    # Standardized port and environment template
 ├── docker-compose.yml              # Master 4-service container orchestration
 └── README.md
@@ -99,87 +75,127 @@ All service ports are standardized across Docker containers and local developmen
 
 | Service | Port | Host Address | Description |
 | :--- | :--- | :--- | :--- |
-| **Frontend** | `3000` | `http://localhost:3000` | Next.js 14 Vernacular UI & Voice Recorder |
-| **Marketplace API** | `8000` | `http://localhost:8000` | FastAPI Backend Gateway & Orchestrator |
-| **RAG Service** | `8001` | `http://localhost:8001` | ChromaDB Constitutional Vector Engine |
-| **Database** | `3306` | `localhost:3306` | MySQL 8.0 Relational Store |
+| **Frontend** | `3000` | `http://localhost:3000` | Next.js 14 Vernacular UI & Citizen Portal |
+| **Marketplace Backend** | `8000` | `http://localhost:8000` | FastAPI Backend & Systems Integration Gateway |
+| **Constitutional RAG** | `8001` | `http://localhost:8001` | ChromaDB Constitutional RAG Microservice |
+| **Database** | `3306` | `localhost:3306` | MySQL 8.0 Relational Database |
 
 ---
 
-## 🎙️ Phase 2: 4-Stage Vernacular Voice-to-RAG Pipeline
+## 🚀 Quickstart & Runbook
 
-Located at [`backend/routers/voice_bridge.py`](backend/routers/voice_bridge.py), the voice bridge exposes `POST /api/v1/voice/ask`:
-
-```mermaid
-flowchart TD
-    A["Citizen Voice Input (kn-IN / hi-IN / ta-IN)"] --> B["Stage 1: Ingest Audio Blob + Language Code"]
-    B --> C["Stage 2: Transcribe Speech to Text (Web Speech API Fallback)"]
-    C --> D["Stage 3: Translate Query to English for RAG Engine"]
-    D --> E["ChromaDB Vector Retrieval: Articles 21, 39A & Case Classification"]
-    E --> F["Stage 4: Token-Preserving Translation to Vernacular"]
-    F --> G["Citizen UI: Plain-Language Advice + Preserved Constitutional Citations"]
-```
-
-### Citation Preservation Technique
-To prevent translation engines from corrupting statutory references (e.g. converting "Article 21" into localized numerals), citations are replaced with unique tokens (`__CONSTITUTIONAL_ARTICLE_0__`) before translation and restored verbatim afterward.
-
-### Web Speech API Zero-Latency Fallback
-Located at [`frontend/src/utils/voiceFallback.ts`](frontend/src/utils/voiceFallback.ts), the browser utilizes `window.SpeechRecognition` / `webkitSpeechRecognition` to stream real-time transcripts locally on the client hardware. This guarantees zero-latency responsiveness even on restricted college, hackathon, or mobile Wi-Fi networks.
-
----
-
-## ⚖️ Step 3: Composite Orchestrator Flow
-
-Exposed at `POST /api/v1/orchestrate/legal-assist`:
-1. Receives citizen legal inquiry.
-2. Queries RAG engine (`/api/v1/rag/ask`) to retrieve Constitutional Articles and determine case classification (`'Civil'`, `'Consumer'`, or `'Criminal'`).
-3. Queries MySQL database for the top 3 verified lawyers in that exact category, sorted by transparent consultation fee affordability.
-4. Returns unified JSON payload with 4 Smart Milestones in **<3 seconds**.
-
----
-
-## 🐳 Quickstart: 1-Command Local Boot
+### Option A: 1-Command Boot with Docker Compose (Recommended)
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/abhishekravih/Legal-advisor-FSD.git
-cd Legal-advisor-FSD
+git clone https://github.com/abhishekravih/nyaya-connect-FSD.git
+cd nyaya-connect-FSD
 
-# 2. Copy environment configuration
+# 2. Copy environment template
 cp .env.example .env
+# Edit .env and supply your DB_PASSWORD and GEMINI_API_KEY
 
 # 3. Boot all 4 containers with Docker Compose
 docker compose up --build -d
 
 # 4. Access services
-# Frontend:     http://localhost:3000
-# Backend API:  http://localhost:8000/docs
-# RAG Service:  http://localhost:8001/docs
+# Frontend:            http://localhost:3000
+# Backend Swagger:     http://localhost:8000/docs
+# RAG Service Swagger: http://localhost:8001/docs
 ```
 
----
+### Option B: Local Direct Execution (Windows / Linux)
 
-## 🔄 Antigravity Worktree Sync Workflow
-
-Use the Antigravity workflow at [`.antigravity/workflows/sync-stack.md`](.antigravity/workflows/sync-stack.md) to manage isolated branches for each team member:
+When running services directly on the host machine outside Docker:
+- Set `DB_HOST=localhost` in your local `.env` (inside Docker, `DB_HOST=db` resolves via Docker network DNS).
+- Database falls back gracefully to local SQLite (`nyayaconnect.db`) if MySQL is not running on localhost:3306.
 
 ```bash
-# Pull and isolate team branches into worktrees
-git worktree add -B frontend-p1 ../nyayaconnect-worktrees/frontend
-git worktree add -B backend-p2 ../nyayaconnect-worktrees/backend
-git worktree add -B rag-p3 ../nyayaconnect-worktrees/rag_service
+# 1. Run Backend
+cd backend
+pip install -r requirements.txt
+python seed_data.py
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# 2. Run RAG Service
+cd ../rag_service
+pip install -r requirements.txt
+uvicorn main:main --host 0.0.0.0 --port 8001 --reload
+
+# 3. Run Frontend
+cd ../frontend
+npm install
+npm run dev
 ```
 
 ---
 
-## 📋 Handoff Deliverables Matrix
+## 🎙️ Vernacular Voice-to-RAG Pipeline
 
-| Deliverable / Artifact | Workspace Location | Consumed By |
-| :--- | :--- | :--- |
-| **Vernacular Voice-to-RAG Bridge** | `backend/routers/voice_bridge.py` | Person 1 (Voice Recorder UI) |
-| **Web Speech API Fallback** | `frontend/src/utils/voiceFallback.ts` | Person 1 (Client Hardware) |
-| **Unified Orchestrator Endpoint** | `POST /api/v1/orchestrate/legal-assist` | Person 1 (Chat-to-Marketplace Flow) |
-| **Multi-Container Docker Setup** | `docker-compose.yml` & `Dockerfile`s | Entire Team (1-Command Local Boot) |
-| **Database Schema & Seed Data** | `backend/schema.sql` | Person 2 (MySQL Database) |
-| **Constitutional RAG Engine** | `rag_service/main.py` | Person 3 (ChromaDB Integration) |
->>>>>>> d9d8d91c31ae93844f1220e72bccbba66157303f
+The integration gateway exposes `POST /api/v1/voice/ask` executing a 4-stage pipeline:
+
+```
+[Citizen Audio (WebM/WAV) or Browser Transcript]
+                      │
+                      ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Stage 1: Input Validation & Streaming 10MB Cap         │
+ │ - Validates BCP-47 language (kn-IN, hi-IN, ta-IN, etc) │
+ │ - Enforces 10MB max binary size via 64KB chunk stream  │
+ └────────────────────────────┬───────────────────────────┘
+                              ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Stage 2: Speech-to-Text Transcription                  │
+ │ - Uses Web Speech API transcript if provided (0ms)     │
+ │ - Falls back to Bhashini ASR or OpenAI Whisper         │
+ └────────────────────────────┬───────────────────────────┘
+                              ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Stage 3: Vernacular to English Translation             │
+ │ - Converts regional query to canonical English query   │
+ └────────────────────────────┬───────────────────────────┘
+                              ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Stage 4: Constitutional RAG & Citation Protection      │
+ │ - Queries ChromaDB RAG Engine for Articles & Advise    │
+ │ - Tokenizes citations (__LEGAL_CITATION_0__)           │
+ │ - Translates explanation to vernacular; restores laws  │
+ └────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 💳 4-Stage Smart Milestone Payments
+
+Legal fees are split into 4 verifiable stages to protect citizens and advocates:
+
+1. **Stage 1 (15%)**: Initial Legal Assessment & Consultation
+2. **Stage 2 (25%)**: Document Drafting & Legal Notice
+3. **Stage 3 (30%)**: Case Filing & First Court Appearance
+4. **Stage 4 (30%)**: Final Arguments & Case Resolution
+
+All bookings atomically persist these 4 milestones with exact `DECIMAL(10,2)` accounting. Client contact numbers are masked on public dashboards (`+91-XXXXX-1234`) for privacy protection.
+
+---
+
+## 🧪 Testing & CI Verification
+
+Run the automated test suite locally:
+
+```bash
+# Backend unit & integration tests (runs self-contained with no pre-existing DB)
+cd backend
+PYTHONPATH=.. pytest tests/ -v
+
+# Frontend production build verification
+cd ../frontend
+npm run build
+```
+
+---
+
+## 📦 Release Evidence & Artifacts
+
+- **Tag**: `v1.0.0`
+- **Network Trace**: [`docs/evidence/network_trace.json`](docs/evidence/network_trace.json)
+- **Architecture Log**: [`docs/evidence/release_notes_v1.0.0.md`](docs/evidence/release_notes_v1.0.0.md)

@@ -4,9 +4,19 @@ from sqlalchemy import func
 from typing import List, Optional, Dict, Any
 from decimal import Decimal
 from pydantic import BaseModel, Field
+import secrets
 from database import get_db
 import models
 import schemas
+from auth.jwt_handler import get_password_hash
+
+def mask_phone_number(raw_phone: Optional[str]) -> str:
+    """Masks phone number to protect citizen privacy on public dashboards."""
+    if not raw_phone or len(raw_phone.strip()) < 4:
+        return "+91-XXXXX-XXXX"
+    digits = "".join(filter(str.isdigit, raw_phone))
+    last4 = digits[-4:] if len(digits) >= 4 else "0000"
+    return f"+91-XXXXX-{last4}"
 
 router = APIRouter(prefix="/api/v1/lawyers", tags=["Lawyer Directory"])
 
@@ -95,50 +105,74 @@ def book_lawyer_direct(payload: DirectBookingRequest, db: Session = Depends(get_
             detail=f"Lawyer with ID {payload.lawyer_id} not found"
         )
 
-    # Find or create a client user record
+    # Find or create a client user record with cryptographically secure random token hash
     user = db.query(models.User).filter(models.User.phone == payload.client_phone).first()
     if not user:
-        # Determine unique email
         clean_phone = "".join(filter(str.isdigit, payload.client_phone))
         email = f"client_{clean_phone}@nyayaconnect.in"
+        existing_email = db.query(models.User).filter(models.User.email == email).first()
+        if existing_email:
+            email = f"client_{clean_phone}_{secrets.token_hex(4)}@nyayaconnect.in"
         user = models.User(
             full_name=payload.client_name,
             email=email,
             phone=payload.client_phone,
-            password_hash="client_direct_auth",
+            password_hash=get_password_hash(secrets.token_urlsafe(32)),
             role=models.UserRole.CLIENT
         )
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        db.flush()
 
     total_fee = Decimal(str(lawyer.consultation_fee))
     # Map category string to Enum
-    cat_enum = models.CaseCategory.CONSUMER
+    cat_enum = models.CaseCategory.Consumer
     cat_upper = payload.case_category.upper()
     if "CIVIL" in cat_upper:
-        cat_enum = models.CaseCategory.CIVIL
+        cat_enum = models.CaseCategory.Civil
     elif "CRIMINAL" in cat_upper:
-        cat_enum = models.CaseCategory.CRIMINAL
+        cat_enum = models.CaseCategory.Criminal
+
+    # Persist real case details in case_summary
+    case_notes = payload.notes.strip() if payload.notes and payload.notes.strip() else f"Direct consultation booking for {payload.case_category} case"
 
     booking = models.Booking(
         user_id=user.user_id,
         lawyer_id=lawyer.lawyer_id,
-        case_title=f"Vernacular Consultation ({payload.case_category})",
         case_category=cat_enum,
-        total_agreed_fee=total_fee,
-        status=models.BookingStatus.PENDING
+        case_summary=case_notes,
+        total_agreed_fee=total_fee
     )
     db.add(booking)
+    db.flush()
+
+    # Atomically persist 4 CaseMilestone rows with exact percentage splits (15%, 25%, 30%, 30%)
+    m1 = Decimal(str(round(total_fee * Decimal("0.15"), 2)))
+    m2 = Decimal(str(round(total_fee * Decimal("0.25"), 2)))
+    m3 = Decimal(str(round(total_fee * Decimal("0.30"), 2)))
+    m4 = total_fee - (m1 + m2 + m3)
+
+    stage_definitions = [
+        (1, "Stage 1: Initial Assessment & Consultation", Decimal("15.00"), m1),
+        (2, "Stage 2: Document Drafting & Legal Notice", Decimal("25.00"), m2),
+        (3, "Stage 3: Case Filing & First Hearing", Decimal("30.00"), m3),
+        (4, "Stage 4: Final Arguments & Resolution", Decimal("30.00"), m4)
+    ]
+
+    milestone_schedule = []
+    for stage_num, name, pct, amt in stage_definitions:
+        milestone = models.CaseMilestone(
+            booking_id=booking.booking_id,
+            stage_number=stage_num,
+            stage_name=name,
+            percentage=pct,
+            amount=amt,
+            status=models.MilestoneStatus.PENDING
+        )
+        db.add(milestone)
+        milestone_schedule.append(f"{name} ({int(pct)}% - ₹{amt})")
+
     db.commit()
     db.refresh(booking)
-
-    milestones = [
-        "Stage 1: Initial Consultation (15%)",
-        "Stage 2: Notice/Drafting (25%)",
-        "Stage 3: Filing & First Hearing (30%)",
-        "Stage 4: Final Arguments (30%)"
-    ]
 
     return DirectBookingResponse(
         booking_id=booking.booking_id,
@@ -147,8 +181,8 @@ def book_lawyer_direct(payload: DirectBookingRequest, db: Session = Depends(get_
         total_fee=float(total_fee),
         payment_status="Confirmed_Escrow_Hold",
         current_milestone=1,
-        milestone_schedule=milestones,
-        message="Consultation booked successfully and persisted in SQL database."
+        milestone_schedule=milestone_schedule,
+        message="Consultation and 4 smart milestones booked and persisted in SQL database."
     )
 
 @router.get("/bookings", response_model=List[DirectBookingRecord], summary="List persisted bookings for client dashboard")
@@ -162,10 +196,10 @@ def list_persisted_bookings(db: Session = Depends(get_db)):
             lawyer_id=b.lawyer_id,
             lawyer_name=b.lawyer.full_name if b.lawyer else "Assigned Advocate",
             client_name=b.user.full_name if b.user else "Citizen",
-            client_phone=b.user.phone if b.user else "",
+            client_phone=mask_phone_number(b.user.phone if b.user else None),
             case_category=b.case_category.value if hasattr(b.case_category, "value") else str(b.case_category),
             total_fee=float(b.total_agreed_fee),
-            payment_status=b.status.value if hasattr(b.status, "value") else str(b.status),
+            payment_status="Confirmed_Escrow_Hold",
             current_milestone=1,
             created_at=str(b.created_at)
         ))

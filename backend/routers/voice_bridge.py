@@ -480,11 +480,25 @@ async def voice_ask_endpoint(
     """
     start_time = time.time()
 
-    # Stage 1: Validation
+    # Stage 1: Bounded Streaming Read & Validation (Strict 10MB Cap)
     valid_lang = validate_language_code(source_language)
     audio_bytes = b""
     if audio_file:
-        audio_bytes = await audio_file.read()
+        CHUNK_SIZE = 64 * 1024
+        total_bytes = 0
+        chunks = []
+        while True:
+            chunk = await audio_file.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            total_bytes += len(chunk)
+            if total_bytes > MAX_AUDIO_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"Audio file exceeds maximum size limit of {MAX_AUDIO_BYTES // (1024 * 1024)}MB."
+                )
+            chunks.append(chunk)
+        audio_bytes = b"".join(chunks)
     validate_audio_payload(audio_bytes, browser_transcript)
 
     # Stage 2: STT
@@ -532,8 +546,21 @@ async def voice_ask_json_endpoint(payload: VoiceAskJSONRequest = Body(...)):
     valid_lang = validate_language_code(payload.source_language)
     audio_bytes = b""
     if payload.audio_base64:
+        # Pre-check base64 encoded length against 10MB binary limit (~13.33MB)
+        if len(payload.audio_base64) > int(MAX_AUDIO_BYTES * 4 / 3) + 1024:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Audio payload exceeds maximum size limit of {MAX_AUDIO_BYTES // (1024 * 1024)}MB."
+            )
         try:
-            audio_bytes = base64.b64decode(payload.audio_base64)
+            audio_bytes = base64.b64decode(payload.audio_base64, validate=True)
+            if len(audio_bytes) > MAX_AUDIO_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"Audio file exceeds maximum size limit of {MAX_AUDIO_BYTES // (1024 * 1024)}MB."
+                )
+        except HTTPException:
+            raise
         except Exception:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed base64 audio string.")
 
