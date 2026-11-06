@@ -75,22 +75,20 @@ class LegalAssistResponse(BaseModel):
     recommended_lawyers: List[LawyerRecommendation]
     response_time_ms: float
 
-def resolve_case_category(rag_category: Optional[str], query: str) -> str:
+def resolve_case_category(rag_category: Optional[str]) -> str:
     """
-    Resolves the legal category (Civil, Consumer, Criminal).
-    Validates RAG category and contextualizes against legal terminology instead of blindly defaulting.
+    Validates upstream RAG legal classification.
+    Rejects missing or invalid categories with HTTP 502 rather than broad keyword guessing.
     """
     if rag_category and isinstance(rag_category, str) and rag_category.strip():
         cat = rag_category.strip().capitalize()
         if cat in ["Civil", "Consumer", "Criminal"]:
             return cat
 
-    q_lower = query.lower()
-    if any(k in q_lower for k in ["arrest", "bail", "custody", "police", "fir", "crime", "criminal", "jail", "ipc", "bns", "bnss"]):
-        return "Criminal"
-    if any(k in q_lower for k in ["defect", "product", "warranty", "refund", "consumer", "service provider", "compensation"]):
-        return "Consumer"
-    return "Civil"
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=f"Upstream RAG service returned invalid or missing legal category: '{rag_category}'. Expected Civil, Consumer, or Criminal."
+    )
 
 async def query_rag_service(query_text: str) -> Dict[str, Any]:
     """Calls Person 3's RAG service POST /api/v1/rag/ask with fallback error reporting."""
@@ -102,7 +100,7 @@ async def query_rag_service(query_text: str) -> Dict[str, Any]:
     last_error = None
     for url in target_urls:
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=3.0) as client:
                 res = await client.post(url, json={"query": query_text})
                 if res.status_code == 200:
                     return res.json()
@@ -148,7 +146,7 @@ async def orchestrate_legal_assist(request: LegalAssistRequest):
     # 2. Query RAG microservice with English query
     rag_data = await query_rag_service(english_query)
     raw_category = rag_data.get("recommended_case_category")
-    category = resolve_case_category(raw_category, english_query)
+    category = resolve_case_category(raw_category)
     articles = [ConstitutionalArticle(**a) for a in rag_data.get("articles", [])]
     raw_explanation = rag_data.get("explanation") or rag_data.get("answer") or ""
 

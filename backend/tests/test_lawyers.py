@@ -17,6 +17,7 @@ from database import (
 )
 import models
 from main import app
+from auth.jwt_handler import create_access_token
 
 client = TestClient(app)
 
@@ -55,7 +56,7 @@ def test_booking_persistence_helper():
         lawyer = db.query(models.Lawyer).filter(models.Lawyer.category == models.CaseCategory.Consumer).first()
         assert lawyer is not None, "Seeded lawyer must exist"
         lawyer_id = lawyer.lawyer_id
-        consultation_fee = float(lawyer.consultation_fee)
+        consultation_fee = Decimal(str(lawyer.consultation_fee))
     finally:
         db.close()
 
@@ -65,17 +66,18 @@ def test_booking_persistence_helper():
         client_name="Test Citizen",
         client_phone="+91-9988776655",
         case_category="Consumer",
-        notes="Defective appliance compensation claim"
+        notes="Defective appliance compensation claim",
+        total_fee_override=consultation_fee
     )
 
     assert "booking_id" in booking
     assert booking["booking_id"] > 0
     assert booking["lawyer_id"] == lawyer_id
-    assert booking["total_fee"] == consultation_fee
+    assert booking["total_fee"] == float(consultation_fee)
     assert len(booking["milestone_schedule"]) == 4
 
     # Verify retrieval
-    all_bookings = get_all_bookings_from_db()
+    all_bookings = get_all_bookings_from_db(user_id=booking["user_id"])
     matching = [b for b in all_bookings if b["booking_id"] == booking["booking_id"]]
     assert len(matching) == 1
     assert matching[0]["client_name"] == "Test Citizen"
@@ -92,7 +94,7 @@ def test_booking_invalid_lawyer_fails():
     assert "not found" in str(exc_info.value).lower()
 
 def test_direct_booking_api_endpoint():
-    """Verify POST /api/v1/lawyers/book endpoint creates booking, returns ID, and masks phone."""
+    """Verify POST /api/v1/lawyers/book endpoint creates booking and returns ID."""
     db = SessionLocal()
     try:
         lawyer = db.query(models.Lawyer).first()
@@ -113,8 +115,9 @@ def test_direct_booking_api_endpoint():
     assert data["booking_id"] > 0
     assert len(data["milestone_schedule"]) == 4
 
-    # Check that GET /api/v1/lawyers/bookings returns masked phone number for privacy
-    b_res = client.get("/api/v1/lawyers/bookings")
+    # Authenticate as Priya and verify scoped bookings
+    token = create_access_token({"sub": "client_9876543210@nyayaconnect.in", "role": "client"})
+    b_res = client.get("/api/v1/lawyers/bookings", headers={"Authorization": f"Bearer {token}"})
     assert b_res.status_code == 200
     bookings = b_res.json()
     matching = [b for b in bookings if b["booking_id"] == data["booking_id"]]

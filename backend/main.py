@@ -92,6 +92,10 @@ app.include_router(bookings.router)
 app.include_router(voice_router)
 app.include_router(orchestrator_router)
 
+# Mount root aliases for Person 1 Next.js client compatibility (/bookings, /lawyers)
+app.include_router(bookings.router, prefix="", include_in_schema=False)
+app.include_router(lawyers.router, prefix="", include_in_schema=False)
+
 # -----------------------------------------------------------------------------
 # Frontend Compatibility Bridges for Person 1
 # -----------------------------------------------------------------------------
@@ -126,16 +130,12 @@ async def legal_question_compatibility(payload: LegalQuestionBridgeRequest):
         query=payload.query,
         source_language=lang_code
     ))
-    # Truthful grounded confidence based on article citations rather than static 0.95
-    art_count = len(res.constitutional_articles)
-    grounded_conf = round(min(0.55 + (art_count * 0.12), 0.95), 2) if art_count > 0 else 0.40
-
     return {
         "answer_text": res.explanation,
         "cited_articles": [a.model_dump() for a in res.constitutional_articles],
         "recommended_category": res.category,
         "recommended_lawyers": [l.model_dump() for l in res.recommended_lawyers],
-        "confidence_score": grounded_conf
+        "confidence_score": None
     }
 
 @app.post("/api/v1/voice-query", tags=["Frontend Compatibility"])

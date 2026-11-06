@@ -15,7 +15,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       MYSQL_DATABASE: nyayaconnect
     ports:
-      - "3306:3306"
+      - "${DB_PORT:-3306}:3306"
     volumes:
       - "./backend/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql"
       - "db_data:/var/lib/mysql"
@@ -33,7 +33,7 @@ services:
     container_name: nyayaconnect_rag
     restart: unless-stopped
     ports:
-      - "8001:8001"
+      - "${RAG_PORT:-8001}:8001"
     env_file:
       - .env
     volumes:
@@ -52,7 +52,7 @@ services:
     container_name: nyayaconnect_backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -61,7 +61,6 @@ services:
     env_file:
       - .env
     environment:
-      # Explicit network wiring inside Docker
       - DB_HOST=db
       - DB_PORT=3306
       - DB_PASSWORD=${DB_PASSWORD}
@@ -83,7 +82,7 @@ services:
     container_name: nyayaconnect_frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_healthy

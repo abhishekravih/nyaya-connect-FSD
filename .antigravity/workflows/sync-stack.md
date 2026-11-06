@@ -53,24 +53,29 @@ if ($missingBranches.Count -gt 0) {
     exit 1
 }
 
-# 4. Safely create worktrees only when real teammate branches exist
+# 4. Safely create and verify worktrees without branch resets
 New-Item -ItemType Directory -Force -Path "../nyayaconnect-worktrees" | Out-Null
 
+$activeWts = (git worktree list) -join "`n"
+
 $worktreeMap = @(
-    @{ Target = "../nyayaconnect-worktrees/frontend"; Remote = "origin/frontend-p1" },
-    @{ Target = "../nyayaconnect-worktrees/backend";  Remote = "origin/backend-p2" },
-    @{ Target = "../nyayaconnect-worktrees/rag_service"; Remote = "origin/rag-p3" }
+    @{ Target = "../nyayaconnect-worktrees/frontend"; Remote = "origin/frontend-p1"; Branch = "frontend-p1" },
+    @{ Target = "../nyayaconnect-worktrees/backend";  Remote = "origin/backend-p2";  Branch = "backend-p2" },
+    @{ Target = "../nyayaconnect-worktrees/rag_service"; Remote = "origin/rag-p3"; Branch = "rag-p3" }
 )
 
 foreach ($wt in $worktreeMap) {
-    if (Test-Path $wt.Target) {
-        Write-Host "Worktree target '$($wt.Target)' already exists. Skipping add to avoid branch reset." -ForegroundColor Yellow
+    if ($activeWts -match [regex]::Escape($wt.Branch)) {
+        Write-Host "Worktree verified as active on $($wt.Branch): $($wt.Target)" -ForegroundColor Green
+    } elseif (Test-Path $wt.Target) {
+        Write-Warning "Target path '$($wt.Target)' exists but is not registered. Status: pending verification."
     } else {
         git worktree add $wt.Target $wt.Remote
+        Write-Host "Worktree created at $($wt.Target) for $($wt.Branch)." -ForegroundColor Green
     }
 }
 
-Write-Host "All worktrees provisioned successfully:" -ForegroundColor Green
+Write-Host "Worktree verification complete:" -ForegroundColor Green
 git worktree list
 ```
 
@@ -101,11 +106,23 @@ if [ "$MISSING" -eq 1 ]; then
 fi
 
 mkdir -p ../nyayaconnect-worktrees
-git worktree add -B frontend-p1 ../nyayaconnect-worktrees/frontend origin/frontend-p1
-git worktree add -B backend-p2 ../nyayaconnect-worktrees/backend origin/backend-p2
-git worktree add -B rag-p3 ../nyayaconnect-worktrees/rag_service origin/rag-p3
+ACTIVE_WTS=$(git worktree list)
 
-echo "Active worktrees:"
+for ITEM in "frontend-p1:origin/frontend-p1:../nyayaconnect-worktrees/frontend" \
+            "backend-p2:origin/backend-p2:../nyayaconnect-worktrees/backend" \
+            "rag-p3:origin/rag-p3:../nyayaconnect-worktrees/rag_service"; do
+  IFS=":" read -r BRANCH REMOTE_REF TARGET <<< "$ITEM"
+  if echo "$ACTIVE_WTS" | grep -Fq "$BRANCH"; then
+    echo "Worktree verified as active on $BRANCH at $TARGET."
+  elif [ -d "$TARGET" ]; then
+    echo "WARNING: Target path '$TARGET' exists but is not registered. Status: pending verification."
+  else
+    git worktree add "$TARGET" "$REMOTE_REF"
+    echo "Worktree created at $TARGET for $BRANCH."
+  fi
+done
+
+echo "Active worktrees verified:"
 git worktree list
 ```
 

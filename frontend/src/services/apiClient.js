@@ -4,13 +4,18 @@ const mocked = process.env.NEXT_PUBLIC_USE_MOCKS !== 'false';
 const wait = () => new Promise(r => setTimeout(r, 300 + Math.random() * 500));
 
 async function request(path, options = {}) {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!base) throw new Error('Set NEXT_PUBLIC_API_BASE_URL to use the live API.');
-  const res = await fetch(`${base}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...options.headers }
-  });
-  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+  const token = typeof window !== 'undefined' ? localStorage.getItem('nyayaconnect-auth-token') : null;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...options.headers
+  };
+  const res = await fetch(`${base}${path}`, { ...options, headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Request failed (${res.status})`);
+  }
   return res.json();
 }
 
@@ -34,7 +39,7 @@ export async function askLegalQuestion(query, lang = 'English') {
     answer_text: `I could not find a close constitutional match for “${query}” in this demo. Consumer product disputes are generally handled under consumer protection law, which is outside this constitutional sources demo. A consumer lawyer can help you assess the available remedies.`,
     cited_articles: [],
     recommended_category: /defective|product|refund|consumer|warranty/.test(q) ? 'Consumer' : 'Civil',
-    confidence_score: 0.32
+    confidence_score: null
   };
 }
 
@@ -79,30 +84,97 @@ export async function submitVoiceQuery(blob, lang = 'English', browserTranscript
         answer_text: data.translated_explanation,
         cited_articles: data.constitutional_articles,
         recommended_category: data.recommended_case_category,
-        confidence_score: 0.90
+        confidence_score: null // Calibrated confidence omitted unless produced by RAG model
       }
     };
   }
   await wait();
-  const transcript = lang === 'Kannada' ? 'ನನ್ನನ್ನು ಬಂಧಿಸಿದರೆ ನನಗೆ ಯಾವ ಹಕ್ಕುಗಳಿವೆ?' : lang === 'Hindi' ? 'गिरफ्तार होने पर मेरे क्या अधिकार हैं?' : lang === 'Tamil' ? 'கைது செய்யப்பட்டால் எனக்கு என்ன உரிமைகள் உள்ளன?' : 'What are my rights if arrested?';
+  const transcript = lang === 'Kannada' ? 'ನನ್ನನ್ನು ಬಂಧಿಸಿದರೆ ನನಗೆ ಯಾವ ಹಕ್ಕುಗಳಿವೆ?' : lang === 'Hindi' ? 'गिरफ्तार होने पर मेरे क्या अधिकार हैं?' : lang === 'Tamil' ? 'கைது செய்யப்பட்டால் ನನಗೆ என்ன உரிமைகள் உள்ளன?' : 'What are my rights if arrested?';
   return { transcript, lang, rag_response: responses.find(r => r.query_keywords.some(k => ['arrest', 'detention', 'article 22'].includes(k))) };
 }
 
 export async function createBooking(payload) {
-  if (!mocked) return request('/bookings', { method: 'POST', body: JSON.stringify(payload) });
+  if (!mocked) {
+    const res = await request('/bookings', {
+      method: 'POST',
+      body: JSON.stringify({
+        lawyer_id: payload.lawyer_id,
+        case_category: payload.category || (payload.lawyer ? payload.lawyer.category : 'Consumer'),
+        issue_summary: payload.issue_summary || 'Legal consultation request',
+        total_fee: payload.total_fee,
+        client_name: payload.client_name || 'Citizen Client',
+        client_phone: payload.client_phone || '+91-9876543210'
+      })
+    });
+    if (res.access_token && typeof window !== 'undefined') {
+      localStorage.setItem('nyayaconnect-auth-token', res.access_token);
+    }
+    const milestones = (res.milestones || []).map(m => ({
+      stage_number: m.stage_number,
+      name: m.stage_name,
+      percentage: m.percentage,
+      amount: m.amount,
+      status: m.status === 'COMPLETED' ? 'Completed' : (m.status === 'IN_PROGRESS' ? 'In Progress' : 'Locked')
+    }));
+    return {
+      ...payload,
+      booking_id: res.booking_id,
+      status: res.payment_status === 'Pending' ? 'pending' : res.payment_status,
+      milestones: milestones.length ? milestones : payload.milestones
+    };
+  }
   await wait();
   return { ...payload, booking_id: `B${Date.now()}`, status: 'pending' };
 }
 
 export async function getBookings() {
-  if (!mocked) return request('/bookings');
+  if (!mocked) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('nyayaconnect-auth-token') : null;
+    if (!token) return [];
+    try {
+      const list = await request('/bookings');
+      return list.map(b => ({
+        booking_id: b.booking_id,
+        lawyer_id: b.lawyer_id,
+        lawyer_name: b.lawyer_name,
+        category: b.category,
+        issue_summary: b.issue_summary,
+        total_fee: b.total_fee,
+        status: b.status,
+        created_at: b.created_at,
+        lawyer: b.lawyer,
+        milestones: (b.milestones || []).map(m => ({
+          stage_number: m.stage_number,
+          name: m.name,
+          percentage: m.percentage,
+          amount: m.amount,
+          status: m.status
+        }))
+      }));
+    } catch (err) {
+      console.warn('Failed to load server bookings:', err);
+      return [];
+    }
+  }
   await wait();
   if (typeof window === 'undefined') return [];
   try { return JSON.parse(localStorage.getItem('nyayaconnect-bookings-v1') || '[]'); } catch { return []; }
 }
 
 export async function updateMilestone(bookingId, milestoneIndex, status) {
-  if (!mocked) return request(`/bookings/${bookingId}/milestones/${milestoneIndex}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  if (!mocked) {
+    const stageNo = milestoneIndex + 1; // 0-based to 1-based stage
+    const normalizedStatus = status.toUpperCase().replace(/\s+/g, '_');
+    const res = await request(`/bookings/${bookingId}/milestones/${stageNo}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: normalizedStatus })
+    });
+    return {
+      bookingId,
+      milestoneIndex,
+      status: res.status === 'COMPLETED' ? 'Completed' : (res.status === 'IN_PROGRESS' ? 'In Progress' : 'Locked')
+    };
+  }
   await wait();
   return { bookingId, milestoneIndex, status };
 }

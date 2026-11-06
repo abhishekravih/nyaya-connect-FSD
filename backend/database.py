@@ -1,6 +1,7 @@
 import os
 import sys
 from typing import Optional, List, Dict, Any, Tuple
+from decimal import Decimal
 
 # Ensure backend root is in PYTHONPATH
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -22,11 +23,15 @@ load_dotenv()
 
 FALLBACK_SQLITE_URL = "sqlite:///./nyayaconnect.db"
 
+def is_external_url(url: str) -> bool:
+    """Detects whether a URL string targets an external SQL server (MySQL / PostgreSQL)."""
+    return any(p in url.lower() for p in ["mysql", "postgresql", "postgres"])
+
 def build_database_url() -> Tuple[str, bool]:
     """
     Constructs the database connection URL.
     Returns (url_string, is_mysql_or_external).
-    
+
     1. If DATABASE_URL is set in environment, uses it.
     2. If DB_HOST is set (e.g. in Docker Compose with db), safely creates a MySQL URL
        via SQLAlchemy's URL.create to escape passwords properly.
@@ -34,7 +39,7 @@ def build_database_url() -> Tuple[str, bool]:
     """
     env_db_url = os.getenv("DATABASE_URL")
     if env_db_url and env_db_url.strip():
-        is_ext = any(p in env_db_url for p in ["mysql", "postgresql", "postgres"])
+        is_ext = is_external_url(env_db_url.strip())
         return env_db_url.strip(), is_ext
 
     db_host = os.getenv("DB_HOST")
@@ -62,36 +67,38 @@ def get_engine(db_url: Optional[str] = None):
     """
     Creates an SQLAlchemy engine.
     If db_url is omitted, uses the configured DATABASE_URL.
-    When running in Docker (IS_EXTERNAL_DB=True), attempts connection and does NOT
-    silently mask failures by switching to SQLite, ensuring health checks are truthful.
+
+    STRICT RULE: Never fall back to SQLite when the selected or configured URL is MySQL or PostgreSQL.
+    SQLite is strictly reserved for local development or tests when explicitly selected.
+    If MySQL/PostgreSQL cannot be reached, creates an engine that fails on connect,
+    ensuring health checks and readiness probes truthfully fail with HTTP 503.
     """
     target_url = db_url or DATABASE_URL
+    is_ext = is_external_url(target_url)
+
+    if not is_ext:
+        # SQLite: used only when explicitly selected
+        return create_engine(
+            target_url,
+            connect_args={"check_same_thread": False}
+        )
+
+    # MySQL or PostgreSQL: strictly enforced without SQLite failover
     try:
-        if target_url.startswith("sqlite"):
-            return create_engine(
-                target_url,
-                connect_args={"check_same_thread": False}
-            )
-        else:
-            eng = create_engine(
-                target_url,
-                pool_pre_ping=True,
-                pool_recycle=3600,
-                connect_args={"connect_timeout": 5}
-            )
-            # Validate connection immediately
-            with eng.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            logger.info("Connected successfully to primary database.")
-            return eng
+        eng = create_engine(
+            target_url,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+            connect_args={"connect_timeout": 3}
+        )
+        with eng.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("Connected successfully to primary external database.")
+        return eng
     except Exception as e:
-        if IS_EXTERNAL_DB and not db_url:
-            logger.error("Primary database (%s) connection failed: %s", target_url.split("@")[-1], str(e))
-            # Return engine that will raise on connect so health/readiness accurately fails
-            return create_engine(target_url, pool_pre_ping=True, connect_args={"connect_timeout": 2})
-        else:
-            logger.warning("Database connection failed, falling back to local SQLite: %s", str(e))
-            return create_engine(FALLBACK_SQLITE_URL, connect_args={"check_same_thread": False})
+        logger.error("Primary database (%s) connection failed: %s", target_url.split("@")[-1], str(e))
+        # Return engine that will raise OperationalError on connect so readiness truthfully fails
+        return create_engine(target_url, pool_pre_ping=True, connect_args={"connect_timeout": 2})
 
 engine = get_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -127,7 +134,6 @@ async def get_lawyers_by_category_db(category: str) -> List[Dict[str, Any]]:
         import models
         db = SessionLocal()
         try:
-            # Map category string to Enum if needed
             cat_val = category.capitalize()
             db_lawyers = db.query(models.Lawyer).filter(
                 models.Lawyer.category == cat_val
@@ -167,16 +173,22 @@ def create_booking_in_db(
     client_name: str,
     client_phone: str,
     case_category: str,
-    notes: Optional[str] = None
+    notes: Optional[str] = None,
+    total_fee_override: Optional[Decimal] = None,
+    user_id: Optional[int] = None
 ) -> Dict[str, Any]:
     """
-    Persists a booking and 4 atomic CaseMilestone records (15%, 25%, 30%, 30%)
-    in the database within a single transaction.
+    Consolidated single booking creation engine:
+    1. Verifies lawyer in database.
+    2. Identifies or creates user account with secure random credentials.
+    3. Persists booking with honest status 'Pending'.
+    4. Atomically creates 4 CaseMilestone rows (15%, 25%, 30%, 30%).
+    5. Sets Milestone 1 to IN_PROGRESS and Milestones 2-4 to PENDING.
+    6. Issues a signed JWT access token for authenticated access to this booking.
     """
     import models
     import secrets
-    from decimal import Decimal
-    from auth.jwt_handler import get_password_hash
+    from auth.jwt_handler import get_password_hash, create_access_token
 
     db = SessionLocal()
     try:
@@ -185,22 +197,27 @@ def create_booking_in_db(
             raise ValueError(f"Lawyer with ID {lawyer_id} not found.")
 
         # Find or create user
-        user = db.query(models.User).filter(models.User.phone == client_phone).first()
-        if not user:
-            clean_phone = "".join(filter(str.isdigit, client_phone))
-            email = f"client_{clean_phone}@nyayaconnect.in"
-            existing_email = db.query(models.User).filter(models.User.email == email).first()
-            if existing_email:
-                email = f"client_{clean_phone}_{secrets.token_hex(4)}@nyayaconnect.in"
-            user = models.User(
-                full_name=client_name,
-                email=email,
-                phone=client_phone,
-                password_hash=get_password_hash(secrets.token_urlsafe(32)),
-                role=models.UserRole.CLIENT
-            )
-            db.add(user)
-            db.flush()
+        if user_id:
+            user = db.query(models.User).filter(models.User.user_id == user_id).first()
+            if not user:
+                raise ValueError(f"User with ID {user_id} not found.")
+        else:
+            user = db.query(models.User).filter(models.User.phone == client_phone).first()
+            if not user:
+                clean_phone = "".join(filter(str.isdigit, client_phone))
+                email = f"client_{clean_phone}@nyayaconnect.in"
+                existing_email = db.query(models.User).filter(models.User.email == email).first()
+                if existing_email:
+                    email = f"client_{clean_phone}_{secrets.token_hex(4)}@nyayaconnect.in"
+                user = models.User(
+                    full_name=client_name or "Citizen Client",
+                    email=email,
+                    phone=client_phone,
+                    password_hash=get_password_hash(secrets.token_urlsafe(32)),
+                    role=models.UserRole.CLIENT
+                )
+                db.add(user)
+                db.flush()
 
         cat_upper = case_category.upper()
         if "CIVIL" in cat_upper:
@@ -210,7 +227,7 @@ def create_booking_in_db(
         else:
             cat_enum = models.CaseCategory.Consumer
 
-        total_fee = Decimal(str(lawyer.consultation_fee))
+        total_fee = total_fee_override if total_fee_override and total_fee_override > 0 else Decimal(str(lawyer.full_case_estimate))
 
         booking = models.Booking(
             user_id=user.user_id,
@@ -229,37 +246,59 @@ def create_booking_in_db(
         m4 = total_fee - (m1 + m2 + m3)
 
         milestone_defs = [
-            (1, "Stage 1: Initial Assessment & Consultation", Decimal("15.00"), m1),
-            (2, "Stage 2: Document Drafting & Legal Notice", Decimal("25.00"), m2),
-            (3, "Stage 3: Case Filing & First Hearing", Decimal("30.00"), m3),
-            (4, "Stage 4: Final Arguments & Resolution", Decimal("30.00"), m4)
+            (1, "Stage 1: Initial Assessment & Consultation", Decimal("15.00"), m1, models.MilestoneStatus.IN_PROGRESS),
+            (2, "Stage 2: Document Drafting & Legal Notice", Decimal("25.00"), m2, models.MilestoneStatus.PENDING),
+            (3, "Stage 3: Case Filing & First Hearing", Decimal("30.00"), m3, models.MilestoneStatus.PENDING),
+            (4, "Stage 4: Final Arguments & Resolution", Decimal("30.00"), m4, models.MilestoneStatus.PENDING)
         ]
 
+        milestone_records = []
         milestone_schedule = []
-        for stage_no, name, pct, amt in milestone_defs:
+        for stage_no, name, pct, amt, init_status in milestone_defs:
             ms = models.CaseMilestone(
                 booking_id=booking.booking_id,
                 stage_number=stage_no,
                 stage_name=name,
                 percentage=pct,
                 amount=amt,
-                status=models.MilestoneStatus.PENDING
+                status=init_status
             )
             db.add(ms)
+            milestone_records.append({
+                "stage_number": stage_no,
+                "stage_name": name,
+                "percentage": float(pct),
+                "amount": float(amt),
+                "status": init_status.value
+            })
             milestone_schedule.append(f"{name} ({int(pct)}% - ₹{amt})")
 
         db.commit()
         db.refresh(booking)
 
+        # Generate scoped JWT access token for this booking owner
+        access_token = create_access_token({
+            "sub": user.email,
+            "user_id": user.user_id,
+            "role": user.role.value if hasattr(user.role, "value") else str(user.role),
+            "booking_id": booking.booking_id
+        })
+
         return {
             "booking_id": booking.booking_id,
+            "user_id": user.user_id,
             "lawyer_id": lawyer.lawyer_id,
             "lawyer_name": lawyer.full_name,
             "client_name": user.full_name,
             "client_phone": user.phone,
             "case_category": cat_enum.value,
+            "case_summary": booking.case_summary,
             "total_fee": float(total_fee),
-            "milestone_schedule": milestone_schedule
+            "payment_status": "Pending",
+            "current_milestone": 1,
+            "milestone_schedule": milestone_schedule,
+            "milestones": milestone_records,
+            "access_token": access_token
         }
     except Exception:
         db.rollback()
@@ -268,22 +307,41 @@ def create_booking_in_db(
         db.close()
 
 
-def get_all_bookings_from_db() -> List[Dict[str, Any]]:
-    """Returns all bookings from database with masked client contact."""
+def get_all_bookings_from_db(user_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    Returns bookings from database scoped to user_id.
+    Prevents public leakage of client names, fees, and private details.
+    """
     import models
     db = SessionLocal()
     try:
-        bookings = db.query(models.Booking).order_by(models.Booking.booking_id.desc()).all()
+        query = db.query(models.Booking)
+        if user_id is not None:
+            query = query.filter(models.Booking.user_id == user_id)
+        bookings = query.order_by(models.Booking.booking_id.desc()).all()
+
         results = []
         for b in bookings:
             results.append({
                 "booking_id": b.booking_id,
+                "user_id": b.user_id,
                 "lawyer_id": b.lawyer_id,
                 "lawyer_name": b.lawyer.full_name if b.lawyer else "Assigned Advocate",
                 "client_name": b.user.full_name if b.user else "Citizen",
                 "client_phone": b.user.phone if b.user else "",
                 "case_category": b.case_category.value if hasattr(b.case_category, "value") else str(b.case_category),
+                "case_summary": b.case_summary,
                 "total_fee": float(b.total_agreed_fee),
+                "payment_status": "Pending",
+                "milestones": [
+                    {
+                        "stage_number": m.stage_number,
+                        "stage_name": m.stage_name,
+                        "percentage": float(m.percentage),
+                        "amount": float(m.amount),
+                        "status": m.status.value
+                    } for m in b.milestones
+                ],
                 "milestone_schedule": [
                     f"{m.stage_name} ({int(m.percentage)}%)" for m in b.milestones
                 ]
