@@ -93,6 +93,42 @@ app.include_router(voice_router)
 app.include_router(orchestrator_router)
 
 # -----------------------------------------------------------------------------
+# Frontend Compatibility Bridges for Person 1
+# -----------------------------------------------------------------------------
+from pydantic import BaseModel
+class LegalQuestionBridgeRequest(BaseModel):
+    query: str
+    lang: str = "English"
+
+@app.post("/api/v1/legal-question", tags=["Frontend Compatibility"])
+@app.post("/legal-question", tags=["Frontend Compatibility"])
+async def legal_question_compatibility(payload: LegalQuestionBridgeRequest):
+    from backend.routers.orchestrator import orchestrate_legal_assist, LegalAssistRequest
+    res = await orchestrate_legal_assist(LegalAssistRequest(
+        query=payload.query,
+        source_language="en-IN" if payload.lang == "English" else payload.lang
+    ))
+    return {
+        "answer_text": res.explanation,
+        "cited_articles": [a.model_dump() for a in res.constitutional_articles],
+        "recommended_category": res.category,
+        "recommended_lawyers": [l.model_dump() for l in res.recommended_lawyers],
+        "confidence_score": 0.95
+    }
+
+@app.post("/api/v1/voice-query", tags=["Frontend Compatibility"])
+@app.post("/voice-query", tags=["Frontend Compatibility"])
+async def voice_query_compatibility(payload: dict):
+    from backend.routers.voice_bridge import voice_ask_json_endpoint, VoiceAskJSONRequest
+    blob = payload.get("blob", "")
+    lang = payload.get("lang", "English")
+    lang_code = "kn-IN" if "kannada" in lang.lower() else "hi-IN" if "hindi" in lang.lower() else "en-IN"
+    return await voice_ask_json_endpoint(VoiceAskJSONRequest(
+        audio_base64=blob if isinstance(blob, str) else None,
+        source_language=lang_code
+    ))
+
+# -----------------------------------------------------------------------------
 # Health Check & Gateway Diagnostics
 # -----------------------------------------------------------------------------
 @app.get("/health", tags=["Health & Diagnostics"])
