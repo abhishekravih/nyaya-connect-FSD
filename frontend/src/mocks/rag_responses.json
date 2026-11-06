@@ -1,0 +1,128 @@
+[
+  {
+    "query_keywords": [
+      "equality",
+      "discrimination",
+      "article 14",
+      "landlord",
+      "deposit",
+      "tenant",
+      "rent"
+    ],
+    "answer_text": "Article 14 guarantees equality before the law and equal protection of the laws to every person in India. It means public authorities must treat people fairly and cannot make arbitrary distinctions.\n\nThe guarantee does not prevent every different treatment. A classification may be valid when it is based on an understandable distinction and has a rational connection to a legitimate purpose. The facts matter, and a lawyer can help assess a specific decision.",
+    "cited_articles": [
+      {
+        "article_number": "14",
+        "part": "Part III — Fundamental Rights",
+        "title": "Equality before law",
+        "excerpt": "The State shall not deny to any person equality before the law or the equal protection of the laws within the territory of India."
+      }
+    ],
+    "recommended_category": "Civil",
+    "confidence_score": 0.95
+  },
+  {
+    "query_keywords": [
+      "speech",
+      "expression",
+      "article 19"
+    ],
+    "answer_text": "Article 19(1)(a) protects the freedom of speech and expression of citizens. This includes the ability to express opinions and share information.\n\nThe right is subject to reasonable restrictions set by law for specified purposes under Article 19(2), such as public order and security of the State. Whether a restriction is lawful depends on its wording, purpose, and how it was applied.",
+    "cited_articles": [
+      {
+        "article_number": "19",
+        "part": "Part III — Fundamental Rights",
+        "title": "Protection of certain rights regarding freedom of speech",
+        "excerpt": "All citizens shall have the right to freedom of speech and expression."
+      }
+    ],
+    "recommended_category": "Civil",
+    "confidence_score": 0.91
+  },
+  {
+    "query_keywords": [
+      "life",
+      "liberty",
+      "article 21",
+      "privacy"
+    ],
+    "answer_text": "Article 21 protects life and personal liberty. The State can take away a person's life or liberty only through a procedure established by law, and courts have interpreted that procedure to require fairness.\n\nThe Supreme Court has also read protections for dignity and privacy into Article 21. The details of a case, the action taken, and the available legal process all matter when deciding what remedy may apply.",
+    "cited_articles": [
+      {
+        "article_number": "21",
+        "part": "Part III — Fundamental Rights",
+        "title": "Protection of life and personal liberty",
+        "excerpt": "No person shall be deprived of his life or personal liberty except according to procedure established by law."
+      }
+    ],
+    "recommended_category": "Civil",
+    "confidence_score": 0.96
+  },
+  {
+    "query_keywords": [
+      "arrest",
+      "detention",
+      "article 22"
+    ],
+    "answer_text": "Article 22 provides safeguards for people who are arrested or detained. A person who is arrested must generally be told the grounds of arrest and allowed to consult and be defended by a lawyer of their choice.\n\nThe arrested person must ordinarily be produced before the nearest magistrate within 24 hours, excluding travel time. Different rules apply to preventive detention and certain other circumstances, so urgent case-specific legal advice is important.",
+    "cited_articles": [
+      {
+        "article_number": "22",
+        "part": "Part III — Fundamental Rights",
+        "title": "Protection against arrest and detention in certain cases",
+        "excerpt": "No person who is arrested shall be detained in custody without being informed, as soon as may be, of the grounds for such arrest nor shall he be denied the right to consult, and to be defended by, a legal practitioner of his choice."
+      }
+    ],
+    "recommended_category": "Criminal",
+    "confidence_score": 0.93
+  },
+  {
+    "query_keywords": [
+      "supreme court",
+      "constitutional remedy",
+      "article 32",
+      "writ"
+    ],
+    "answer_text": "Article 32 gives people the right to approach the Supreme Court to enforce Fundamental Rights. The Court may issue directions, orders, or writs such as habeas corpus, mandamus, prohibition, quo warranto, and certiorari.\n\nHigh Courts also have writ jurisdiction under Article 226, which extends to other legal rights as well. The right forum and remedy depend on the facts, urgency, and procedural requirements.",
+    "cited_articles": [
+      {
+        "article_number": "32",
+        "part": "Part III — Fundamental Rights",
+        "title": "Remedies for enforcement of rights conferred by this Part",
+        "excerpt": "The right to move the Supreme Court by appropriate proceedings for the enforcement of the rights conferred by this Part is guaranteed."
+      },
+      {
+        "article_number": "226",
+        "part": "Part VI — The States",
+        "title": "Power of High Courts to issue certain writs",
+        "excerpt": "Every High Court shall have power, throughout the territories in relation to which it exercises jurisdiction, to issue to any person or authority... directions, orders or writs."
+      },
+      {
+        "article_number": "39A",
+        "part": "Part IV — Directive Principles",
+        "title": "Equal justice and free legal aid",
+        "excerpt": "The State shall secure that the operation of the legal system promotes justice, on a basis of equal opportunity, and shall, in particular, provide free legal aid..."
+      }
+    ],
+    "recommended_category": "Civil",
+    "confidence_score": 0.88
+  },
+  {
+    "query_keywords": [
+      "free legal aid",
+      "article 39a",
+      "legal services"
+    ],
+    "answer_text": "Article 39A directs the State to promote equal justice and provide free legal aid so that opportunities to secure justice are not denied because of economic or other disabilities. Legal Services Authorities provide assistance under laws and eligibility rules.\n\nYou may be eligible based on factors such as income, category, or the type of matter. Contact your District Legal Services Authority or State Legal Services Authority to check current eligibility and apply.\n\nThis is an unusually long citation excerpt for layout testing: legal aid can include representation by an advocate, payment of court fees and other charges, and help in preparing legal documents. The exact support available varies with the authority, the case, and applicable rules. This sample text intentionally continues to test wrapping, accordion height, and overflow behavior on narrow mobile screens without clipping the content or pushing controls off the card.",
+    "cited_articles": [
+      {
+        "article_number": "39A",
+        "part": "Part IV — Directive Principles",
+        "title": "Equal justice and free legal aid",
+        "excerpt": "The State shall secure that the operation of the legal system promotes justice, on a basis of equal opportunity, and shall, in particular, provide free legal aid, by suitable legislation or schemes or in any other way, to ensure that opportunities for securing justice are not denied to any citizen by reason of economic or other disabilities. The State shall also ensure that the operation of the legal system is fair, equitable, and accessible to all people, including those who may need assistance to understand or exercise their rights."
+      }
+    ],
+    "recommended_category": "Civil",
+    "confidence_score": 0.9
+  }
+]
